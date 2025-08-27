@@ -2,53 +2,507 @@
 
 {% block title %}Protein Explorer - KinoPlex{% endblock %}
 
+{% block extra_css %}
+<style>
+    /* Search Interface */
+    .search-header {
+        background: var(--glass-bg);
+        border-radius: 20px;
+        padding: 3rem;
+        margin-bottom: 3rem;
+        backdrop-filter: blur(20px);
+        border: 1px solid var(--border-color);
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .search-header::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: conic-gradient(from 0deg at 50% 50%,
+            rgba(16, 185, 129, 0.1) 0deg,
+            rgba(59, 130, 246, 0.1) 120deg,
+            rgba(139, 92, 246, 0.1) 240deg,
+            rgba(16, 185, 129, 0.1) 360deg);
+        animation: rotate 20s linear infinite;
+        pointer-events: none;
+    }
+
+    @keyframes rotate {
+        to { transform: rotate(360deg); }
+    }
+
+    .search-title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
+        position: relative;
+        z-index: 10;
+        color: var(--text-primary);
+    }
+
+    .search-subtitle {
+        color: var(--text-secondary);
+        font-size: 1.1rem;
+        margin-bottom: 2rem;
+        position: relative;
+        z-index: 10;
+    }
+
+    .search-controls {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 1rem;
+        max-width: 600px;
+        margin: 0 auto;
+        position: relative;
+        z-index: 10;
+    }
+
+    .search-input-wrapper {
+        position: relative;
+    }
+
+    .search-suggestions {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: var(--secondary-bg);
+        border: 1px solid var(--border-color);
+        border-top: none;
+        border-radius: 0 0 10px 10px;
+        max-height: 300px;
+        overflow-y: auto;
+        z-index: 1000;
+        display: none;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .suggestion-item {
+        padding: 1rem;
+        cursor: pointer;
+        transition: var(--transition-smooth);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .suggestion-item:hover {
+        background: rgba(255, 255, 255, 0.1);
+    }
+
+    .suggestion-item:last-child {
+        border-bottom: none;
+    }
+
+    .suggestion-main {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .suggestion-name {
+        font-weight: 600;
+        color: var(--text-primary);
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 1.1rem;
+    }
+
+    .suggestion-stats {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        margin-top: 0.25rem;
+    }
+
+    .suggestion-confidence {
+        background: var(--gradient-accent);
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    /* Results Layout */
+    .results-section {
+        display: none;
+        margin-top: 2rem;
+    }
+
+    .results-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 0;
+        border-bottom: 1px solid var(--border-color);
+        margin-bottom: 2rem;
+    }
+
+    .results-count {
+        color: var(--text-secondary);
+        font-weight: 500;
+    }
+
+    /* Protein Cards */
+    .protein-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+        gap: 2rem;
+    }
+
+    .protein-card {
+        background: var(--glass-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 2rem;
+        backdrop-filter: blur(20px);
+        transition: var(--transition-smooth);
+        position: relative;
+        overflow: hidden;
+        cursor: pointer;
+    }
+
+    .protein-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 3px;
+        background: var(--gradient-primary);
+        transform: scaleX(0);
+        transition: var(--transition-smooth);
+    }
+
+    .protein-card:hover {
+        transform: translateY(-8px);
+        box-shadow: var(--shadow-elevated);
+        border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .protein-card:hover::before {
+        transform: scaleX(1);
+    }
+
+    .protein-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 1.5rem;
+    }
+
+    .protein-name {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        color: var(--text-primary);
+        font-family: 'JetBrains Mono', monospace;
+    }
+
+    .protein-stats {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .stat-item {
+        text-align: center;
+        padding: 1rem;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 10px;
+        transition: var(--transition-smooth);
+    }
+
+    .stat-item:hover {
+        background: rgba(255, 255, 255, 0.1);
+        transform: translateY(-2px);
+    }
+
+    .stat-number {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        font-family: 'JetBrains Mono', monospace;
+    }
+
+    .stat-text {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-top: 0.25rem;
+    }
+
+    .confidence-bar {
+        height: 4px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 2px;
+        margin-top: 1rem;
+        overflow: hidden;
+    }
+
+    .confidence-fill {
+        height: 100%;
+        background: var(--gradient-primary);
+        border-radius: 2px;
+        transition: width 0.3s ease;
+    }
+
+    /* Featured Proteins */
+    .featured-section {
+        margin-top: 3rem;
+    }
+
+    .featured-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 2rem;
+        margin-top: 2rem;
+    }
+
+    .featured-card {
+        background: var(--glass-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 2rem;
+        backdrop-filter: blur(20px);
+        transition: var(--transition-smooth);
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .featured-card::after {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -50%;
+        width: 100%;
+        height: 100%;
+        background: radial-gradient(circle, rgba(59, 130, 246, 0.1), transparent);
+        opacity: 0;
+        transition: var(--transition-smooth);
+    }
+
+    .featured-card:hover::after {
+        opacity: 1;
+        transform: scale(1.2);
+    }
+
+    .featured-card:hover {
+        transform: translateY(-8px);
+        border-color: rgba(59, 130, 246, 0.3);
+    }
+
+    .featured-protein {
+        font-size: 1.25rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        color: var(--text-primary);
+        font-family: 'JetBrains Mono', monospace;
+    }
+
+    .featured-description {
+        color: var(--text-secondary);
+        line-height: 1.5;
+    }
+
+    /* Loading and Empty States */
+    .loading-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+        gap: 2rem;
+    }
+
+    .loading-card {
+        background: var(--glass-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 2rem;
+        backdrop-filter: blur(20px);
+    }
+
+    .skeleton {
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+        background-size: 200% 100%;
+        animation: shimmer 1.5s infinite;
+        border-radius: 4px;
+    }
+
+    @keyframes shimmer {
+        0% { background-position: -200% 0; }
+        100% { background-position: 200% 0; }
+    }
+
+    .skeleton-text {
+        height: 1rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .skeleton-text.wide { width: 80%; }
+    .skeleton-text.medium { width: 60%; }
+    .skeleton-text.narrow { width: 40%; }
+
+    .empty-state {
+        text-align: center;
+        padding: 4rem 0;
+    }
+
+    .empty-state i {
+        font-size: 3rem;
+        color: var(--text-muted);
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .search-controls {
+            grid-template-columns: 1fr;
+        }
+
+        .protein-grid,
+        .featured-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .protein-stats {
+            grid-template-columns: 1fr;
+        }
+
+        .results-header {
+            flex-direction: column;
+            gap: 1rem;
+        }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container">
-    <div class="glass-card">
-        <h1>
+    <!-- Search Header -->
+    <div class="search-header">
+        <h1 class="search-title">
             <i class="fas fa-dna"></i>
             Protein Explorer
         </h1>
-        <p style="color: var(--text-secondary); margin-bottom: 2rem;">
-            Explore phosphorylation sites across human proteins with detailed structural and functional context.
+        <p class="search-subtitle">
+            Explore phosphorylation sites across human proteins with detailed structural and functional context
         </p>
 
-        <!-- Search Section -->
-        <div class="mb-4">
-            <div class="search-box">
-                <input type="text" class="form-control" id="protein-search"
-                       placeholder="Enter protein name or gene symbol (e.g., TP53, AKT1, BRCA1)">
+        <div class="search-controls">
+            <div class="search-input-wrapper">
+                <div class="search-box">
+                    <input type="text" class="form-control" id="protein-search"
+                           placeholder="Enter protein name or gene symbol (e.g., TP53, AKT1, BRCA1)">
+                </div>
+                <div class="search-suggestions" id="search-suggestions">
+                    <!-- Autocomplete suggestions will appear here -->
+                </div>
             </div>
-            <button class="btn btn-primary mt-2" onclick="searchProtein()">
+            <button class="btn btn-primary" id="search-btn">
                 <i class="fas fa-search"></i>
-                Search Protein
+                Search
             </button>
         </div>
+    </div>
 
-        <!-- Results Section -->
-        <div id="results-section" style="display: none;">
-            <h2>Search Results</h2>
-            <div id="protein-results">
-                <!-- Results will be populated here -->
+    <!-- Results Section -->
+    <div class="results-section" id="results-section">
+        <div class="results-header">
+            <div class="results-count" id="results-count">
+                Found 0 proteins
             </div>
         </div>
 
-        <!-- Featured Proteins -->
-        <div class="mt-4">
-            <h3>Featured Proteins</h3>
-            <div class="grid-3">
-                <div class="glass-card" onclick="loadProtein('TP53')">
-                    <h4>TP53</h4>
-                    <p>Tumor protein p53 - Guardian of the genome</p>
-                </div>
-                <div class="glass-card" onclick="loadProtein('AKT1')">
-                    <h4>AKT1</h4>
-                    <p>RAC-alpha serine/threonine-protein kinase</p>
-                </div>
-                <div class="glass-card" onclick="loadProtein('BRCA1')">
-                    <h4>BRCA1</h4>
-                    <p>Breast cancer 1, early onset</p>
-                </div>
+        <div class="protein-grid" id="protein-grid">
+            <!-- Protein cards will be inserted here -->
+        </div>
+    </div>
+
+    <!-- Loading State -->
+    <div class="loading-section" id="loading-section" style="display: none;">
+        <div class="loading-grid">
+            <div class="loading-card">
+                <div class="skeleton skeleton-text wide"></div>
+                <div class="skeleton skeleton-text medium"></div>
+                <div class="skeleton skeleton-text narrow"></div>
+                <div style="height: 1rem;"></div>
+                <div class="skeleton skeleton-text wide"></div>
+                <div class="skeleton skeleton-text medium"></div>
+            </div>
+            <div class="loading-card">
+                <div class="skeleton skeleton-text wide"></div>
+                <div class="skeleton skeleton-text medium"></div>
+                <div class="skeleton skeleton-text narrow"></div>
+                <div style="height: 1rem;"></div>
+                <div class="skeleton skeleton-text wide"></div>
+                <div class="skeleton skeleton-text medium"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Empty State -->
+    <div class="empty-state" id="empty-state" style="display: none;">
+        <div class="glass-card" style="max-width: 500px; margin: 0 auto;">
+            <i class="fas fa-search"></i>
+            <h3 style="margin-bottom: 1rem; color: var(--text-secondary);">No proteins found</h3>
+            <p style="color: var(--text-muted);">
+                Try a different gene symbol or search term.
+            </p>
+        </div>
+    </div>
+
+    <!-- Featured Proteins -->
+    <div class="featured-section">
+        <h2 style="text-align: center; margin-bottom: 1rem; color: var(--text-primary);">Featured Proteins</h2>
+        <p style="text-align: center; color: var(--text-secondary); margin-bottom: 2rem;">
+            Explore these well-studied proteins to see the platform in action
+        </p>
+
+        <div class="featured-grid">
+            <div class="featured-card" onclick="searchProtein('TP53')">
+                <h4 class="featured-protein">TP53</h4>
+                <p class="featured-description">
+                    Tumor protein p53 - Guardian of the genome. Key regulator of cell cycle and apoptosis.
+                </p>
+            </div>
+            <div class="featured-card" onclick="searchProtein('AKT1')">
+                <h4 class="featured-protein">AKT1</h4>
+                <p class="featured-description">
+                    RAC-alpha serine/threonine-protein kinase. Central node in PI3K/AKT signaling pathway.
+                </p>
+            </div>
+            <div class="featured-card" onclick="searchProtein('BRCA1')">
+                <h4 class="featured-protein">BRCA1</h4>
+                <p class="featured-description">
+                    Breast cancer 1, early onset. DNA repair protein involved in homologous recombination.
+                </p>
+            </div>
+            <div class="featured-card" onclick="searchProtein('CDK2')">
+                <h4 class="featured-protein">CDK2</h4>
+                <p class="featured-description">
+                    Cyclin-dependent kinase 2. Essential for G1/S and intra-S phase transitions.
+                </p>
+            </div>
+            <div class="featured-card" onclick="searchProtein('GSK3B')">
+                <h4 class="featured-protein">GSK3B</h4>
+                <p class="featured-description">
+                    Glycogen synthase kinase-3 beta. Key regulator in multiple signaling pathways.
+                </p>
+            </div>
+            <div class="featured-card" onclick="searchProtein('ERK1')">
+                <h4 class="featured-protein">ERK1</h4>
+                <p class="featured-description">
+                    Mitogen-activated protein kinase 3. Critical component of MAPK/ERK signaling.
+                </p>
             </div>
         </div>
     </div>
@@ -57,24 +511,250 @@
 
 {% block extra_js %}
 <script>
-    function searchProtein() {
-        const query = document.getElementById('protein-search').value.trim();
-        if (query) {
-            loadProtein(query);
+    class ProteinSearcher {
+        constructor() {
+            this.proteins = [];
+            this.currentQuery = '';
+            this.searchTimeout = null;
+
+            this.init();
+        }
+
+        init() {
+            this.setupEventListeners();
+            this.checkUrlParams();
+        }
+
+        setupEventListeners() {
+            const searchInput = document.getElementById('protein-search');
+            const searchBtn = document.getElementById('search-btn');
+            const suggestionsContainer = document.getElementById('search-suggestions');
+
+            // Search functionality with autocomplete
+            searchInput.addEventListener('input', () => {
+                const query = searchInput.value.trim();
+
+                if (this.searchTimeout) {
+                    clearTimeout(this.searchTimeout);
+                }
+
+                if (query.length >= 1) {
+                    this.searchTimeout = setTimeout(() => {
+                        this.showSuggestions(query);
+                    }, 300);
+                } else {
+                    suggestionsContainer.style.display = 'none';
+                }
+            });
+
+            // Hide suggestions when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.search-input-wrapper')) {
+                    suggestionsContainer.style.display = 'none';
+                }
+            });
+
+            // Enter key search
+            searchInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    suggestionsContainer.style.display = 'none';
+                    this.performSearch();
+                }
+            });
+
+            // Search button
+            searchBtn.addEventListener('click', () => {
+                suggestionsContainer.style.display = 'none';
+                this.performSearch();
+            });
+        }
+
+        checkUrlParams() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const protein = urlParams.get('protein');
+
+            if (protein) {
+                document.getElementById('protein-search').value = protein;
+                this.performSearch();
+            }
+        }
+
+        async showSuggestions(query) {
+            const suggestionsContainer = document.getElementById('search-suggestions');
+
+            if (!query || query.length < 1) {
+                suggestionsContainer.style.display = 'none';
+                return;
+            }
+
+            const data = await KinoAPI.get(`/search/proteins?q=${encodeURIComponent(query)}&limit=8`);
+
+            if (data && data.proteins && data.proteins.length > 0) {
+                suggestionsContainer.innerHTML = data.proteins.map(protein => {
+                    const avgConf = protein.avg_confidence || 0;
+                    const confText = avgConf > 0.8 ? 'High' : avgConf > 0.5 ? 'Medium' : 'Low';
+
+                    return `
+                        <div class="suggestion-item" onclick="proteinSearcher.selectProtein('${protein.gene_symbol}')">
+                            <div class="suggestion-main">
+                                <div class="suggestion-name">${protein.gene_symbol}</div>
+                                <div class="suggestion-stats">
+                                    ${KinoAPI.formatNumber(protein.site_count)} sites •
+                                    ${KinoAPI.formatNumber(protein.significant_sites)} significant •
+                                    ${KinoAPI.formatNumber(protein.pathway_count)} pathways
+                                </div>
+                            </div>
+                            <div class="suggestion-confidence">${confText}</div>
+                        </div>
+                    `;
+                }).join('');
+                suggestionsContainer.style.display = 'block';
+            } else {
+                suggestionsContainer.innerHTML = `
+                    <div class="suggestion-item" style="cursor: default;">
+                        <div class="suggestion-main">
+                            <div style="color: var(--text-muted); text-align: center;">
+                                No proteins found matching "${query}"
+                            </div>
+                        </div>
+                    </div>
+                `;
+                suggestionsContainer.style.display = 'block';
+            }
+        }
+
+        selectProtein(geneSymbol) {
+            document.getElementById('protein-search').value = geneSymbol;
+            document.getElementById('search-suggestions').style.display = 'none';
+            this.performSearch();
+        }
+
+        async performSearch() {
+            const query = document.getElementById('protein-search').value.trim().toUpperCase();
+
+            if (!query) {
+                this.hideAllSections();
+                return;
+            }
+
+            this.currentQuery = query;
+            this.showLoadingState();
+
+            const data = await KinoAPI.get(`/search/proteins?q=${encodeURIComponent(query)}&limit=20`);
+
+            if (data && data.proteins) {
+                this.proteins = data.proteins;
+                this.displayResults();
+
+                // Update URL
+                const newUrl = new URL(window.location);
+                newUrl.searchParams.set('protein', query);
+                window.history.replaceState({}, '', newUrl);
+            } else {
+                this.showEmptyState();
+            }
+        }
+
+        showLoadingState() {
+            this.hideAllSections();
+            document.getElementById('loading-section').style.display = 'block';
+        }
+
+        hideAllSections() {
+            ['results-section', 'loading-section', 'empty-state'].forEach(id => {
+                document.getElementById(id).style.display = 'none';
+            });
+        }
+
+        displayResults() {
+            this.hideAllSections();
+
+            if (this.proteins.length === 0) {
+                this.showEmptyState();
+                return;
+            }
+
+            // Update results count
+            const count = this.proteins.length;
+            document.getElementById('results-count').textContent =
+                `Found ${KinoAPI.formatNumber(count)} protein${count !== 1 ? 's' : ''}`;
+
+            this.renderProteinCards();
+            document.getElementById('results-section').style.display = 'block';
+        }
+
+        renderProteinCards() {
+            const grid = document.getElementById('protein-grid');
+
+            grid.innerHTML = this.proteins.map(protein => {
+                const avgConf = protein.avg_confidence || 0;
+                const maxConf = protein.max_confidence || 0;
+
+                return `
+                    <div class="protein-card" onclick="proteinSearcher.viewProtein('${protein.gene_symbol}')">
+                        <div class="protein-header">
+                            <h3 class="protein-name">${protein.gene_symbol}</h3>
+                        </div>
+
+                        <div class="protein-stats">
+                            <div class="stat-item">
+                                <div class="stat-number">${KinoAPI.formatNumber(protein.site_count)}</div>
+                                <div class="stat-text">Total Sites</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-number">${KinoAPI.formatNumber(protein.significant_sites)}</div>
+                                <div class="stat-text">Significant</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-number">${KinoAPI.formatNumber(protein.pathway_count)}</div>
+                                <div class="stat-text">Pathways</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-number">${(avgConf * 100).toFixed(0)}%</div>
+                                <div class="stat-text">Avg Confidence</div>
+                            </div>
+                        </div>
+
+                        <div class="confidence-bar">
+                            <div class="confidence-fill" style="width: ${maxConf * 100}%"></div>
+                        </div>
+
+                        <div style="text-align: center; margin-top: 1rem;">
+                            <button class="btn btn-primary btn-sm">
+                                <i class="fas fa-eye"></i>
+                                View Details
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        showEmptyState() {
+            this.hideAllSections();
+            document.getElementById('empty-state').style.display = 'block';
+        }
+
+        viewProtein(geneSymbol) {
+            // Redirect to the detailed protein view
+            window.location.href = `/protein/${geneSymbol}`;
         }
     }
 
-    function loadProtein(proteinName) {
-        window.location.href = `/proteins?protein=${proteinName}`;
+    // Global function for featured protein cards
+    function searchProtein(geneSymbol) {
+        document.getElementById('protein-search').value = geneSymbol;
+        if (window.proteinSearcher) {
+            window.proteinSearcher.performSearch();
+        }
     }
 
-    // Allow Enter key to trigger search
+    // Initialize protein searcher
+    let proteinSearcher;
     document.addEventListener('DOMContentLoaded', () => {
-        document.getElementById('protein-search').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                searchProtein();
-            }
-        });
+        proteinSearcher = new ProteinSearcher();
+        window.proteinSearcher = proteinSearcher;
     });
 </script>
 {% endblock %}

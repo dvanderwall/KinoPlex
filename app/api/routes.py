@@ -1,4 +1,4 @@
-"""Main API endpoints for data retrieval."""
+"""Fixed API endpoints for pathway and protein search."""
 
 from flask import request, jsonify, current_app, g
 from app.api import bp
@@ -125,7 +125,7 @@ def get_overview_stats():
 
 @bp.route('/search/pathways')
 def search_pathways():
-    """Advanced pathway search with filters."""
+    """Advanced pathway search with filters - FIXED VERSION."""
     query = request.args.get('q', '').strip()
     collection = request.args.get('collection', '')
     min_genes = int(request.args.get('min_genes', 0))
@@ -142,7 +142,7 @@ def search_pathways():
         if 'gene_sets' not in existing_tables:
             return jsonify({'pathways': [], 'message': 'Gene sets table not found'})
 
-        # Build basic query
+        # Build conditions for the WHERE clause
         conditions = ["(gs.gs_name LIKE ? OR gs.gs_description LIKE ?)"]
         params = [f'%{query}%', f'%{query}%']
 
@@ -150,15 +150,27 @@ def search_pathways():
             conditions.append("gs.gs_collection = ?")
             params.append(collection)
 
+        # FIXED: Properly join tables to get actual gene counts
         sql = f"""
-        SELECT gs.gs_id, gs.gs_name, gs.gs_collection, gs.gs_description, gs.gs_pmid,
-               0 as gene_count, 0 as significant_sites
+        SELECT 
+            gs.gs_id, 
+            gs.gs_name, 
+            gs.gs_collection, 
+            gs.gs_description, 
+            gs.gs_pmid,
+            COUNT(DISTINCT gsm.gene_symbol) as gene_count,
+            COUNT(DISTINCT CASE WHEN p.significant_fdr05 = 1 THEN p.site_id END) as significant_sites
         FROM gene_sets gs
+        LEFT JOIN gene_set_memberships gsm ON gs.gs_id = gsm.gs_id
+        LEFT JOIN phosphosites p ON gsm.gene_symbol = p.gene_symbol
         WHERE {' AND '.join(conditions)}
-        ORDER BY gs.gs_name
+        GROUP BY gs.gs_id, gs.gs_name, gs.gs_collection, gs.gs_description, gs.gs_pmid
+        HAVING COUNT(DISTINCT gsm.gene_symbol) >= ?
+        ORDER BY significant_sites DESC, gene_count DESC
         LIMIT ?
         """
-        params.append(limit)
+
+        params.extend([min_genes, limit])
 
         results = execute_query(sql, tuple(params))
         pathways = [dict(row) for row in results] if results else []
@@ -179,7 +191,7 @@ def search_pathways():
 
 @bp.route('/search/proteins')
 def search_proteins():
-    """Advanced protein search with site statistics."""
+    """Advanced protein search with site statistics - FIXED VERSION."""
     query = request.args.get('q', '').strip().upper()
     limit = min(int(request.args.get('limit', 50)), 100)
 
@@ -187,14 +199,14 @@ def search_proteins():
         return jsonify({'proteins': []})
 
     try:
-        # Simple protein search based on phosphosites table
+        # FIXED: Better protein search with proper statistics
         sql = """
         SELECT 
             gene_symbol,
             COUNT(site_id) as site_count,
             COUNT(CASE WHEN significant_fdr05 = 1 THEN 1 END) as significant_sites,
-            AVG(predicted_prob_calibrated) as avg_confidence,
-            MAX(predicted_prob_calibrated) as max_confidence
+            AVG(CASE WHEN predicted_prob_calibrated IS NOT NULL THEN predicted_prob_calibrated END) as avg_confidence,
+            MAX(CASE WHEN predicted_prob_calibrated IS NOT NULL THEN predicted_prob_calibrated END) as max_confidence
         FROM phosphosites 
         WHERE gene_symbol LIKE ?
         GROUP BY gene_symbol
@@ -207,7 +219,16 @@ def search_proteins():
 
         for row in results:
             protein_dict = dict(row)
-            protein_dict['pathway_count'] = 0  # Placeholder
+
+            # Get pathway count for this protein
+            pathway_count_sql = """
+            SELECT COUNT(DISTINCT gs_id) as pathway_count
+            FROM gene_set_memberships
+            WHERE gene_symbol = ?
+            """
+            pathway_result = execute_query(pathway_count_sql, (protein_dict['gene_symbol'],), fetch_one=True)
+            protein_dict['pathway_count'] = pathway_result['pathway_count'] if pathway_result else 0
+
             proteins.append(protein_dict)
 
         return jsonify({'proteins': proteins})
@@ -219,9 +240,9 @@ def search_proteins():
 
 @bp.route('/pathway/<int:pathway_id>')
 def get_pathway_details(pathway_id):
-    """Get comprehensive pathway analysis."""
+    """Get comprehensive pathway analysis - FIXED VERSION."""
     try:
-        # Simple pathway lookup
+        # Get pathway basic info
         pathway_query = """
         SELECT gs_id, gs_name, gs_collection, gs_description, gs_pmid
         FROM gene_sets 
@@ -232,10 +253,40 @@ def get_pathway_details(pathway_id):
         if not pathway:
             return jsonify({'error': 'Pathway not found'}), 404
 
+        # Get pathway statistics
+        stats_query = """
+        SELECT 
+            COUNT(DISTINCT gsm.gene_symbol) as total_genes,
+            COUNT(DISTINCT p.site_id) as total_sites,
+            COUNT(DISTINCT CASE WHEN p.significant_fdr05 = 1 THEN p.site_id END) as significant_sites
+        FROM gene_set_memberships gsm
+        LEFT JOIN phosphosites p ON gsm.gene_symbol = p.gene_symbol
+        WHERE gsm.gs_id = ?
+        """
+        stats_result = execute_query(stats_query, (pathway_id,), fetch_one=True)
+        stats = dict(stats_result) if stats_result else {'total_genes': 0, 'total_sites': 0, 'significant_sites': 0}
+
+        # Get associated proteins with their stats
+        proteins_query = """
+        SELECT 
+            gsm.gene_symbol,
+            COUNT(p.site_id) as total_sites,
+            COUNT(CASE WHEN p.significant_fdr05 = 1 THEN 1 END) as significant_sites,
+            AVG(CASE WHEN p.predicted_prob_calibrated IS NOT NULL THEN p.predicted_prob_calibrated END) as avg_confidence
+        FROM gene_set_memberships gsm
+        LEFT JOIN phosphosites p ON gsm.gene_symbol = p.gene_symbol
+        WHERE gsm.gs_id = ?
+        GROUP BY gsm.gene_symbol
+        ORDER BY significant_sites DESC, total_sites DESC
+        LIMIT 50
+        """
+        proteins_results = execute_query(proteins_query, (pathway_id,))
+        proteins = [dict(row) for row in proteins_results] if proteins_results else []
+
         return jsonify({
             'pathway': dict(pathway),
-            'proteins': [],
-            'stats': {'total_genes': 0, 'total_sites': 0, 'significant_sites': 0}
+            'proteins': proteins,
+            'stats': stats
         })
 
     except Exception as e:
@@ -245,7 +296,7 @@ def get_pathway_details(pathway_id):
 
 @bp.route('/protein/<gene_symbol>')
 def get_protein_details(gene_symbol):
-    """Get comprehensive protein analysis."""
+    """Get comprehensive protein analysis - FIXED VERSION."""
     gene_symbol = gene_symbol.upper()
 
     try:
@@ -268,12 +319,31 @@ def get_protein_details(gene_symbol):
 
         sites = [dict(row) for row in sites_results]
 
-        # Basic protein info
-        protein = {
+        # Get protein metadata if available
+        protein_query = """
+        SELECT gene_symbol, ncbi_gene_id, ensembl_gene_id
+        FROM proteins
+        WHERE gene_symbol = ?
+        """
+        protein_result = execute_query(protein_query, (gene_symbol,), fetch_one=True)
+
+        protein = dict(protein_result) if protein_result else {
             'gene_symbol': gene_symbol,
             'ncbi_gene_id': None,
             'ensembl_gene_id': None
         }
+
+        # Get pathway associations
+        pathways_query = """
+        SELECT gs.gs_id, gs.gs_name, gs.gs_collection, gs.gs_description
+        FROM gene_set_memberships gsm
+        JOIN gene_sets gs ON gsm.gs_id = gs.gs_id
+        WHERE gsm.gene_symbol = ?
+        ORDER BY gs.gs_collection, gs.gs_name
+        LIMIT 20
+        """
+        pathways_results = execute_query(pathways_query, (gene_symbol,))
+        pathways = [dict(row) for row in pathways_results] if pathways_results else []
 
         # Calculate statistics
         stats = {
@@ -281,19 +351,227 @@ def get_protein_details(gene_symbol):
             'significant_sites': sum(1 for s in sites if s.get('significant_fdr05')),
             'high_confidence': sum(1 for s in sites if s.get('predicted_prob_calibrated', 0) > 0.8),
             'avg_confidence': sum(s.get('predicted_prob_calibrated', 0) for s in sites) / len(sites) if sites else 0,
-            'pathway_count': 0
+            'pathway_count': len(pathways)
         }
 
         return jsonify({
             'protein': protein,
             'sites': sites,
-            'pathways': [],
+            'pathways': pathways,
             'stats': stats
         })
 
     except Exception as e:
         current_app.logger.error(f"Error getting protein details: {e}")
         return jsonify({'error': 'Failed to retrieve protein details'}), 500
+
+
+@bp.route('/pathway/<int:pathway_id>/analysis')
+def get_pathway_analysis(pathway_id):
+    """Comprehensive pathway-level phosphoproteomics analysis."""
+    try:
+        # Get pathway basic info
+        pathway_query = """
+        SELECT gs_id, gs_name, gs_collection, gs_description, gs_pmid
+        FROM gene_sets 
+        WHERE gs_id = ?
+        """
+        pathway = execute_query(pathway_query, (pathway_id,), fetch_one=True)
+
+        if not pathway:
+            return jsonify({'error': 'Pathway not found'}), 404
+
+        # Get all proteins in this pathway with their phosphosites
+        proteins_sites_query = """
+        SELECT 
+            p.site_id,
+            p.gene_symbol,
+            p.position,
+            p.residue_type,
+            p.motif,
+            p.predicted_prob_calibrated,
+            p.qvalue,
+            p.significant_fdr05,
+            p.significant_fdr10,
+            p.significant_fdr20,
+            p.plddt,
+            p.secondary_structure,
+            p.sasa_ratio,
+            p.disorder_score,
+            -- Get all kinase scores as individual columns
+            p.AKT1_MotifScore, p.AKT2_MotifScore, p.AKT3_MotifScore,
+            p.CDK1_MotifScore, p.CDK2_MotifScore, p.CDK4_MotifScore, p.CDK5_MotifScore,
+            p.GSK3A_MotifScore, p.GSK3B_MotifScore,
+            p.ERK1_MotifScore, p.ERK2_MotifScore,
+            p.JNK1_MotifScore, p.JNK2_MotifScore, p.JNK3_MotifScore,
+            p.P38A_MotifScore, p.P38B_MotifScore, p.P38D_MotifScore, p.P38G_MotifScore,
+            p.PKACA_MotifScore, p.PKACB_MotifScore, p.PKACG_MotifScore,
+            p.ROCK1_MotifScore, p.ROCK2_MotifScore,
+            p.MTOR_MotifScore,
+            p.CAMK2A_MotifScore, p.CAMK2B_MotifScore, p.CAMK2D_MotifScore, p.CAMK2G_MotifScore,
+            p.CAMK4_MotifScore, p.DAPK1_MotifScore, p.DAPK2_MotifScore, p.DAPK3_MotifScore
+        FROM gene_set_memberships gsm
+        JOIN phosphosites p ON gsm.gene_symbol = p.gene_symbol
+        WHERE gsm.gs_id = ?
+        ORDER BY p.gene_symbol, p.predicted_prob_calibrated DESC
+        """
+
+        sites_results = execute_query(proteins_sites_query, (pathway_id,))
+        if not sites_results:
+            return jsonify({'error': 'No phosphorylation sites found for this pathway'}), 404
+
+        # Convert to list of dicts for easier processing
+        all_sites = [dict(row) for row in sites_results]
+
+        # Organize data by protein
+        proteins_data = {}
+        kinase_columns = [col for col in all_sites[0].keys() if col.endswith('_MotifScore')]
+
+        for site in all_sites:
+            gene = site['gene_symbol']
+            if gene not in proteins_data:
+                proteins_data[gene] = {
+                    'gene_symbol': gene,
+                    'sites': [],
+                    'stats': {
+                        'total_sites': 0,
+                        'significant_sites': 0,
+                        'high_confidence_sites': 0,
+                        'avg_confidence': 0,
+                        'max_confidence': 0
+                    }
+                }
+
+            proteins_data[gene]['sites'].append(site)
+
+        # Calculate protein-level statistics and top kinases
+        for gene, data in proteins_data.items():
+            sites = data['sites']
+
+            # Basic stats
+            data['stats']['total_sites'] = len(sites)
+            data['stats']['significant_sites'] = sum(1 for s in sites if s['significant_fdr05'])
+            data['stats']['high_confidence_sites'] = sum(1 for s in sites if (s['predicted_prob_calibrated'] or 0) > 0.8)
+
+            confidences = [s['predicted_prob_calibrated'] or 0 for s in sites]
+            data['stats']['avg_confidence'] = sum(confidences) / len(confidences) if confidences else 0
+            data['stats']['max_confidence'] = max(confidences) if confidences else 0
+
+            # Calculate average kinase scores across all sites for this protein
+            kinase_scores = {}
+            for kinase_col in kinase_columns:
+                kinase_name = kinase_col.replace('_MotifScore', '')
+                scores = [s[kinase_col] for s in sites if s[kinase_col] is not None]
+                if scores:
+                    kinase_scores[kinase_name] = {
+                        'avg_score': sum(scores) / len(scores),
+                        'max_score': max(scores),
+                        'site_count': len(scores)
+                    }
+
+            # Get top 10 kinases for this protein
+            top_kinases = sorted(
+                kinase_scores.items(),
+                key=lambda x: x[1]['avg_score'],
+                reverse=True
+            )[:10]
+
+            data['top_kinases'] = [
+                {
+                    'kinase': k,
+                    'avg_score': round(v['avg_score'], 3),
+                    'max_score': round(v['max_score'], 3),
+                    'site_count': v['site_count']
+                }
+                for k, v in top_kinases
+            ]
+
+        # Pathway-wide kinase enrichment analysis
+        pathway_kinase_scores = {}
+        significant_sites = [s for s in all_sites if s['significant_fdr05']]
+
+        for kinase_col in kinase_columns:
+            kinase_name = kinase_col.replace('_MotifScore', '')
+
+            # Get scores for significant sites only
+            scores = [s[kinase_col] for s in significant_sites if s[kinase_col] is not None and s[kinase_col] > 0]
+
+            if len(scores) >= 3:  # Minimum threshold for meaningful analysis
+                pathway_kinase_scores[kinase_name] = {
+                    'avg_score': sum(scores) / len(scores),
+                    'max_score': max(scores),
+                    'site_count': len(scores),
+                    'protein_count': len(set(s['gene_symbol'] for s in significant_sites if s[kinase_col] and s[kinase_col] > 0)),
+                    'high_scoring_sites': len([s for s in scores if s > 0.7])
+                }
+
+        # Rank pathway-wide kinases
+        enriched_kinases = sorted(
+            pathway_kinase_scores.items(),
+            key=lambda x: (x[1]['avg_score'], x[1]['site_count']),
+            reverse=True
+        )[:20]
+
+        # Pathway-wide statistics
+        pathway_stats = {
+            'total_proteins': len(proteins_data),
+            'total_sites': len(all_sites),
+            'significant_sites': len(significant_sites),
+            'high_confidence_sites': len([s for s in all_sites if (s['predicted_prob_calibrated'] or 0) > 0.8]),
+            'avg_confidence': sum(s['predicted_prob_calibrated'] or 0 for s in all_sites) / len(all_sites),
+            'serine_sites': len([s for s in all_sites if s['residue_type'] == 'S']),
+            'threonine_sites': len([s for s in all_sites if s['residue_type'] == 'T']),
+            'tyrosine_sites': len([s for s in all_sites if s['residue_type'] == 'Y'])
+        }
+
+        # Secondary structure distribution
+        structure_distribution = {}
+        for site in all_sites:
+            struct = site['secondary_structure'] or 'Unknown'
+            structure_distribution[struct] = structure_distribution.get(struct, 0) + 1
+
+        # Confidence distribution bins
+        confidence_bins = {'<0.3': 0, '0.3-0.5': 0, '0.5-0.7': 0, '0.7-0.9': 0, '>0.9': 0}
+        for site in all_sites:
+            conf = site['predicted_prob_calibrated'] or 0
+            if conf < 0.3:
+                confidence_bins['<0.3'] += 1
+            elif conf < 0.5:
+                confidence_bins['0.3-0.5'] += 1
+            elif conf < 0.7:
+                confidence_bins['0.5-0.7'] += 1
+            elif conf < 0.9:
+                confidence_bins['0.7-0.9'] += 1
+            else:
+                confidence_bins['>0.9'] += 1
+
+        return jsonify({
+            'pathway': dict(pathway),
+            'proteins': [proteins_data[gene] for gene in sorted(proteins_data.keys())],
+            'enriched_kinases': [
+                {
+                    'kinase': k,
+                    'avg_score': round(v['avg_score'], 3),
+                    'max_score': round(v['max_score'], 3),
+                    'site_count': v['site_count'],
+                    'protein_count': v['protein_count'],
+                    'high_scoring_sites': v['high_scoring_sites']
+                }
+                for k, v in enriched_kinases
+            ],
+            'pathway_stats': pathway_stats,
+            'structure_distribution': structure_distribution,
+            'confidence_distribution': confidence_bins,
+            'analysis_metadata': {
+                'generated_at': time.time(),
+                'kinases_analyzed': len(kinase_columns),
+                'analysis_type': 'comprehensive_pathway_phosphoproteomics'
+            }
+        })
+
+    except Exception as e:
+        current_app.logger.error(f"Error in pathway analysis: {e}")
+        return jsonify({'error': 'Failed to perform pathway analysis'}), 500
 
 
 @bp.teardown_app_request

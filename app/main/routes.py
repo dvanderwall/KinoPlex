@@ -1,4 +1,4 @@
-"""Main web interface routes."""
+"""Updated main web interface routes with protein detail view."""
 
 from flask import render_template, request, current_app
 from app.main import bp
@@ -20,6 +20,19 @@ def pathway_explorer():
 def protein_explorer():
     """Protein-centric exploration interface."""
     return render_template('proteins.html')
+
+
+@bp.route('/protein/<gene_symbol>')
+def protein_detail(gene_symbol):
+    """Detailed protein analysis view."""
+    # Render the detailed protein template (site.html)
+    return render_template('site.html', gene_symbol=gene_symbol.upper())
+
+
+@bp.route('/pathway/<int:pathway_id>/analysis')
+def pathway_analysis(pathway_id):
+    """Comprehensive pathway phosphoproteomics analysis."""
+    return render_template('pathway_analysis.html', pathway_id=pathway_id)
 
 
 @bp.route('/kinases')

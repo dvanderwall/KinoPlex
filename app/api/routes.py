@@ -366,9 +366,10 @@ def get_protein_details(gene_symbol):
         return jsonify({'error': 'Failed to retrieve protein details'}), 500
 
 
+# app/api/routes.py - Updated pathway analysis endpoint
 @bp.route('/pathway/<int:pathway_id>/analysis')
 def get_pathway_analysis(pathway_id):
-    """Comprehensive pathway-level phosphoproteomics analysis."""
+    """Comprehensive pathway-level phosphoproteomics analysis - FIXED VERSION."""
     try:
         # Get pathway basic info
         pathway_query = """
@@ -398,18 +399,39 @@ def get_pathway_analysis(pathway_id):
             p.secondary_structure,
             p.sasa_ratio,
             p.disorder_score,
-            -- Get all kinase scores as individual columns
-            p.AKT1_MotifScore, p.AKT2_MotifScore, p.AKT3_MotifScore,
-            p.CDK1_MotifScore, p.CDK2_MotifScore, p.CDK4_MotifScore, p.CDK5_MotifScore,
-            p.GSK3A_MotifScore, p.GSK3B_MotifScore,
-            p.ERK1_MotifScore, p.ERK2_MotifScore,
-            p.JNK1_MotifScore, p.JNK2_MotifScore, p.JNK3_MotifScore,
-            p.P38A_MotifScore, p.P38B_MotifScore, p.P38D_MotifScore, p.P38G_MotifScore,
-            p.PKACA_MotifScore, p.PKACB_MotifScore, p.PKACG_MotifScore,
-            p.ROCK1_MotifScore, p.ROCK2_MotifScore,
-            p.MTOR_MotifScore,
-            p.CAMK2A_MotifScore, p.CAMK2B_MotifScore, p.CAMK2D_MotifScore, p.CAMK2G_MotifScore,
-            p.CAMK4_MotifScore, p.DAPK1_MotifScore, p.DAPK2_MotifScore, p.DAPK3_MotifScore
+            -- Get specific kinase scores that we know exist
+            COALESCE(p.AKT1_MotifScore, 0) as AKT1_MotifScore,
+            COALESCE(p.AKT2_MotifScore, 0) as AKT2_MotifScore,
+            COALESCE(p.AKT3_MotifScore, 0) as AKT3_MotifScore,
+            COALESCE(p.CDK1_MotifScore, 0) as CDK1_MotifScore,
+            COALESCE(p.CDK2_MotifScore, 0) as CDK2_MotifScore,
+            COALESCE(p.CDK4_MotifScore, 0) as CDK4_MotifScore,
+            COALESCE(p.CDK5_MotifScore, 0) as CDK5_MotifScore,
+            COALESCE(p.GSK3A_MotifScore, 0) as GSK3A_MotifScore,
+            COALESCE(p.GSK3B_MotifScore, 0) as GSK3B_MotifScore,
+            COALESCE(p.ERK1_MotifScore, 0) as ERK1_MotifScore,
+            COALESCE(p.ERK2_MotifScore, 0) as ERK2_MotifScore,
+            COALESCE(p.JNK1_MotifScore, 0) as JNK1_MotifScore,
+            COALESCE(p.JNK2_MotifScore, 0) as JNK2_MotifScore,
+            COALESCE(p.JNK3_MotifScore, 0) as JNK3_MotifScore,
+            COALESCE(p.P38A_MotifScore, 0) as P38A_MotifScore,
+            COALESCE(p.P38B_MotifScore, 0) as P38B_MotifScore,
+            COALESCE(p.P38D_MotifScore, 0) as P38D_MotifScore,
+            COALESCE(p.P38G_MotifScore, 0) as P38G_MotifScore,
+            COALESCE(p.PKACA_MotifScore, 0) as PKACA_MotifScore,
+            COALESCE(p.PKACB_MotifScore, 0) as PKACB_MotifScore,
+            COALESCE(p.PKACG_MotifScore, 0) as PKACG_MotifScore,
+            COALESCE(p.ROCK1_MotifScore, 0) as ROCK1_MotifScore,
+            COALESCE(p.ROCK2_MotifScore, 0) as ROCK2_MotifScore,
+            COALESCE(p.MTOR_MotifScore, 0) as MTOR_MotifScore,
+            COALESCE(p.CAMK2A_MotifScore, 0) as CAMK2A_MotifScore,
+            COALESCE(p.CAMK2B_MotifScore, 0) as CAMK2B_MotifScore,
+            COALESCE(p.CAMK2D_MotifScore, 0) as CAMK2D_MotifScore,
+            COALESCE(p.CAMK2G_MotifScore, 0) as CAMK2G_MotifScore,
+            COALESCE(p.CAMK4_MotifScore, 0) as CAMK4_MotifScore,
+            COALESCE(p.DAPK1_MotifScore, 0) as DAPK1_MotifScore,
+            COALESCE(p.DAPK2_MotifScore, 0) as DAPK2_MotifScore,
+            COALESCE(p.DAPK3_MotifScore, 0) as DAPK3_MotifScore
         FROM gene_set_memberships gsm
         JOIN phosphosites p ON gsm.gene_symbol = p.gene_symbol
         WHERE gsm.gs_id = ?
@@ -425,7 +447,14 @@ def get_pathway_analysis(pathway_id):
 
         # Organize data by protein
         proteins_data = {}
-        kinase_columns = [col for col in all_sites[0].keys() if col.endswith('_MotifScore')]
+        kinase_columns = ['AKT1_MotifScore', 'AKT2_MotifScore', 'AKT3_MotifScore', 'CDK1_MotifScore',
+                          'CDK2_MotifScore', 'CDK4_MotifScore', 'CDK5_MotifScore', 'GSK3A_MotifScore',
+                          'GSK3B_MotifScore', 'ERK1_MotifScore', 'ERK2_MotifScore', 'JNK1_MotifScore',
+                          'JNK2_MotifScore', 'JNK3_MotifScore', 'P38A_MotifScore', 'P38B_MotifScore',
+                          'P38D_MotifScore', 'P38G_MotifScore', 'PKACA_MotifScore', 'PKACB_MotifScore',
+                          'PKACG_MotifScore', 'ROCK1_MotifScore', 'ROCK2_MotifScore', 'MTOR_MotifScore',
+                          'CAMK2A_MotifScore', 'CAMK2B_MotifScore', 'CAMK2D_MotifScore', 'CAMK2G_MotifScore',
+                          'CAMK4_MotifScore', 'DAPK1_MotifScore', 'DAPK2_MotifScore', 'DAPK3_MotifScore']
 
         for site in all_sites:
             gene = site['gene_symbol']
@@ -438,7 +467,8 @@ def get_pathway_analysis(pathway_id):
                         'significant_sites': 0,
                         'high_confidence_sites': 0,
                         'avg_confidence': 0,
-                        'max_confidence': 0
+                        'max_confidence': 0,
+                        'max_position': 0
                     }
                 }
 
@@ -451,17 +481,19 @@ def get_pathway_analysis(pathway_id):
             # Basic stats
             data['stats']['total_sites'] = len(sites)
             data['stats']['significant_sites'] = sum(1 for s in sites if s['significant_fdr05'])
-            data['stats']['high_confidence_sites'] = sum(1 for s in sites if (s['predicted_prob_calibrated'] or 0) > 0.8)
+            data['stats']['high_confidence_sites'] = sum(
+                1 for s in sites if (s['predicted_prob_calibrated'] or 0) > 0.8)
 
             confidences = [s['predicted_prob_calibrated'] or 0 for s in sites]
             data['stats']['avg_confidence'] = sum(confidences) / len(confidences) if confidences else 0
             data['stats']['max_confidence'] = max(confidences) if confidences else 0
+            data['stats']['max_position'] = max((s['position'] or 0 for s in sites), default=0)
 
             # Calculate average kinase scores across all sites for this protein
             kinase_scores = {}
             for kinase_col in kinase_columns:
                 kinase_name = kinase_col.replace('_MotifScore', '')
-                scores = [s[kinase_col] for s in sites if s[kinase_col] is not None]
+                scores = [s[kinase_col] for s in sites if s[kinase_col] is not None and s[kinase_col] > 0]
                 if scores:
                     kinase_scores[kinase_name] = {
                         'avg_score': sum(scores) / len(scores),
@@ -501,7 +533,8 @@ def get_pathway_analysis(pathway_id):
                     'avg_score': sum(scores) / len(scores),
                     'max_score': max(scores),
                     'site_count': len(scores),
-                    'protein_count': len(set(s['gene_symbol'] for s in significant_sites if s[kinase_col] and s[kinase_col] > 0)),
+                    'protein_count': len(
+                        set(s['gene_symbol'] for s in significant_sites if s[kinase_col] and s[kinase_col] > 0)),
                     'high_scoring_sites': len([s for s in scores if s > 0.7])
                 }
 
@@ -572,7 +605,6 @@ def get_pathway_analysis(pathway_id):
     except Exception as e:
         current_app.logger.error(f"Error in pathway analysis: {e}")
         return jsonify({'error': 'Failed to perform pathway analysis'}), 500
-
 
 @bp.teardown_app_request
 def close_db(error):

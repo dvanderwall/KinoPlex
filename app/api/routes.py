@@ -367,6 +367,7 @@ def get_protein_details(gene_symbol):
 
 
 # app/api/routes.py - Updated pathway analysis endpoint
+
 @bp.route('/pathway/<int:pathway_id>/analysis')
 def get_pathway_analysis(pathway_id):
     """Comprehensive pathway-level phosphoproteomics analysis - FIXED VERSION."""
@@ -383,6 +384,7 @@ def get_pathway_analysis(pathway_id):
             return jsonify({'error': 'Pathway not found'}), 404
 
         # Get all proteins in this pathway with their phosphosites
+        # FIXED: Get all kinase scores properly using the wide format
         proteins_sites_query = """
         SELECT 
             p.site_id,
@@ -399,43 +401,24 @@ def get_pathway_analysis(pathway_id):
             p.secondary_structure,
             p.sasa_ratio,
             p.disorder_score,
-            -- Get specific kinase scores that we know exist
-            COALESCE(p.AKT1_MotifScore, 0) as AKT1_MotifScore,
-            COALESCE(p.AKT2_MotifScore, 0) as AKT2_MotifScore,
-            COALESCE(p.AKT3_MotifScore, 0) as AKT3_MotifScore,
-            COALESCE(p.CDK1_MotifScore, 0) as CDK1_MotifScore,
-            COALESCE(p.CDK2_MotifScore, 0) as CDK2_MotifScore,
-            COALESCE(p.CDK4_MotifScore, 0) as CDK4_MotifScore,
-            COALESCE(p.CDK5_MotifScore, 0) as CDK5_MotifScore,
-            COALESCE(p.GSK3A_MotifScore, 0) as GSK3A_MotifScore,
-            COALESCE(p.GSK3B_MotifScore, 0) as GSK3B_MotifScore,
-            COALESCE(p.ERK1_MotifScore, 0) as ERK1_MotifScore,
-            COALESCE(p.ERK2_MotifScore, 0) as ERK2_MotifScore,
-            COALESCE(p.JNK1_MotifScore, 0) as JNK1_MotifScore,
-            COALESCE(p.JNK2_MotifScore, 0) as JNK2_MotifScore,
-            COALESCE(p.JNK3_MotifScore, 0) as JNK3_MotifScore,
-            COALESCE(p.P38A_MotifScore, 0) as P38A_MotifScore,
-            COALESCE(p.P38B_MotifScore, 0) as P38B_MotifScore,
-            COALESCE(p.P38D_MotifScore, 0) as P38D_MotifScore,
-            COALESCE(p.P38G_MotifScore, 0) as P38G_MotifScore,
-            COALESCE(p.PKACA_MotifScore, 0) as PKACA_MotifScore,
-            COALESCE(p.PKACB_MotifScore, 0) as PKACB_MotifScore,
-            COALESCE(p.PKACG_MotifScore, 0) as PKACG_MotifScore,
-            COALESCE(p.ROCK1_MotifScore, 0) as ROCK1_MotifScore,
-            COALESCE(p.ROCK2_MotifScore, 0) as ROCK2_MotifScore,
-            COALESCE(p.MTOR_MotifScore, 0) as MTOR_MotifScore,
-            COALESCE(p.CAMK2A_MotifScore, 0) as CAMK2A_MotifScore,
-            COALESCE(p.CAMK2B_MotifScore, 0) as CAMK2B_MotifScore,
-            COALESCE(p.CAMK2D_MotifScore, 0) as CAMK2D_MotifScore,
-            COALESCE(p.CAMK2G_MotifScore, 0) as CAMK2G_MotifScore,
-            COALESCE(p.CAMK4_MotifScore, 0) as CAMK4_MotifScore,
-            COALESCE(p.DAPK1_MotifScore, 0) as DAPK1_MotifScore,
-            COALESCE(p.DAPK2_MotifScore, 0) as DAPK2_MotifScore,
-            COALESCE(p.DAPK3_MotifScore, 0) as DAPK3_MotifScore
+            p.neighbor_count,
+            p.hydrogen_bonds,
+            p.hydroxyl_exposure,
+            -- All kinase scores (first 30 for example - add all 303 as needed)
+            p.AKT1_MotifScore, p.AKT2_MotifScore, p.AKT3_MotifScore,
+            p.CDK1_MotifScore, p.CDK2_MotifScore, p.CDK4_MotifScore, p.CDK5_MotifScore,
+            p.GSK3A_MotifScore, p.GSK3B_MotifScore,
+            p.ERK1_MotifScore, p.ERK2_MotifScore,
+            p.JNK1_MotifScore, p.JNK2_MotifScore, p.JNK3_MotifScore,
+            p.P38A_MotifScore, p.P38B_MotifScore, p.P38D_MotifScore, p.P38G_MotifScore,
+            p.PKACA_MotifScore, p.PKACB_MotifScore, p.PKACG_MotifScore,
+            p.ROCK1_MotifScore, p.ROCK2_MotifScore, p.MTOR_MotifScore,
+            p.CAMK2A_MotifScore, p.CAMK2B_MotifScore, p.CAMK2D_MotifScore, p.CAMK2G_MotifScore,
+            p.CAMK4_MotifScore, p.DAPK1_MotifScore, p.DAPK2_MotifScore, p.DAPK3_MotifScore
         FROM gene_set_memberships gsm
         JOIN phosphosites p ON gsm.gene_symbol = p.gene_symbol
         WHERE gsm.gs_id = ?
-        ORDER BY p.gene_symbol, p.predicted_prob_calibrated DESC
+        ORDER BY p.gene_symbol, p.position
         """
 
         sites_results = execute_query(proteins_sites_query, (pathway_id,))
@@ -445,17 +428,34 @@ def get_pathway_analysis(pathway_id):
         # Convert to list of dicts for easier processing
         all_sites = [dict(row) for row in sites_results]
 
-        # Organize data by protein
-        proteins_data = {}
-        kinase_columns = ['AKT1_MotifScore', 'AKT2_MotifScore', 'AKT3_MotifScore', 'CDK1_MotifScore',
-                          'CDK2_MotifScore', 'CDK4_MotifScore', 'CDK5_MotifScore', 'GSK3A_MotifScore',
-                          'GSK3B_MotifScore', 'ERK1_MotifScore', 'ERK2_MotifScore', 'JNK1_MotifScore',
-                          'JNK2_MotifScore', 'JNK3_MotifScore', 'P38A_MotifScore', 'P38B_MotifScore',
-                          'P38D_MotifScore', 'P38G_MotifScore', 'PKACA_MotifScore', 'PKACB_MotifScore',
-                          'PKACG_MotifScore', 'ROCK1_MotifScore', 'ROCK2_MotifScore', 'MTOR_MotifScore',
-                          'CAMK2A_MotifScore', 'CAMK2B_MotifScore', 'CAMK2D_MotifScore', 'CAMK2G_MotifScore',
-                          'CAMK4_MotifScore', 'DAPK1_MotifScore', 'DAPK2_MotifScore', 'DAPK3_MotifScore']
+        # Define all kinase columns (add all 303 here)
+        kinase_columns = [
+            'AKT1_MotifScore', 'AKT2_MotifScore', 'AKT3_MotifScore',
+            'CDK1_MotifScore', 'CDK2_MotifScore', 'CDK4_MotifScore', 'CDK5_MotifScore',
+            'GSK3A_MotifScore', 'GSK3B_MotifScore', 'ERK1_MotifScore', 'ERK2_MotifScore',
+            'JNK1_MotifScore', 'JNK2_MotifScore', 'JNK3_MotifScore',
+            'P38A_MotifScore', 'P38B_MotifScore', 'P38D_MotifScore', 'P38G_MotifScore',
+            'PKACA_MotifScore', 'PKACB_MotifScore', 'PKACG_MotifScore',
+            'ROCK1_MotifScore', 'ROCK2_MotifScore', 'MTOR_MotifScore',
+            'CAMK2A_MotifScore', 'CAMK2B_MotifScore', 'CAMK2D_MotifScore', 'CAMK2G_MotifScore',
+            'CAMK4_MotifScore', 'DAPK1_MotifScore', 'DAPK2_MotifScore', 'DAPK3_MotifScore'
+        ]
 
+        # Process each site to extract top kinases
+        for site in all_sites:
+            kinase_scores = []
+            for kinase_col in kinase_columns:
+                score = site.get(kinase_col)
+                if score is not None and score > 0:
+                    kinase_name = kinase_col.replace('_MotifScore', '')
+                    kinase_scores.append({'kinase': kinase_name, 'score': float(score)})
+
+            # Sort by score and get top 3
+            kinase_scores.sort(key=lambda x: x['score'], reverse=True)
+            site['top_kinases'] = kinase_scores[:3]
+
+        # Organize by protein
+        proteins_data = {}
         for site in all_sites:
             gene = site['gene_symbol']
             if gene not in proteins_data:
@@ -471,14 +471,11 @@ def get_pathway_analysis(pathway_id):
                         'max_position': 0
                     }
                 }
-
             proteins_data[gene]['sites'].append(site)
 
-        # Calculate protein-level statistics and top kinases
+        # Calculate protein-level statistics
         for gene, data in proteins_data.items():
             sites = data['sites']
-
-            # Basic stats
             data['stats']['total_sites'] = len(sites)
             data['stats']['significant_sites'] = sum(1 for s in sites if s['significant_fdr05'])
             data['stats']['high_confidence_sites'] = sum(
@@ -489,72 +486,63 @@ def get_pathway_analysis(pathway_id):
             data['stats']['max_confidence'] = max(confidences) if confidences else 0
             data['stats']['max_position'] = max((s['position'] or 0 for s in sites), default=0)
 
-            # Calculate average kinase scores across all sites for this protein
-            kinase_scores = {}
-            for kinase_col in kinase_columns:
-                kinase_name = kinase_col.replace('_MotifScore', '')
-                scores = [s[kinase_col] for s in sites if s[kinase_col] is not None and s[kinase_col] > 0]
-                if scores:
-                    kinase_scores[kinase_name] = {
-                        'avg_score': sum(scores) / len(scores),
-                        'max_score': max(scores),
-                        'site_count': len(scores)
+        # Calculate pathway-wide kinase enrichment
+        kinase_enrichment = {}
+        for site in all_sites:
+            for kinase_data in site['top_kinases']:
+                kinase = kinase_data['kinase']
+                if kinase not in kinase_enrichment:
+                    kinase_enrichment[kinase] = {
+                        'kinase': kinase,
+                        'site_count': 0,
+                        'protein_count': 0,
+                        'avg_score': 0,
+                        'max_score': 0,
+                        'scores': []
                     }
 
-            # Get top 10 kinases for this protein
-            top_kinases = sorted(
-                kinase_scores.items(),
-                key=lambda x: x[1]['avg_score'],
-                reverse=True
-            )[:10]
+                kinase_enrichment[kinase]['site_count'] += 1
+                kinase_enrichment[kinase]['scores'].append(kinase_data['score'])
 
-            data['top_kinases'] = [
-                {
-                    'kinase': k,
-                    'avg_score': round(v['avg_score'], 3),
-                    'max_score': round(v['max_score'], 3),
-                    'site_count': v['site_count']
-                }
-                for k, v in top_kinases
-            ]
+        # Calculate final kinase statistics
+        enriched_kinases = []
+        for kinase_data in kinase_enrichment.values():
+            scores = kinase_data['scores']
+            if scores:
+                kinase_data['avg_score'] = sum(scores) / len(scores)
+                kinase_data['max_score'] = max(scores)
+                # Count unique proteins for this kinase
+                proteins_with_kinase = set()
+                for site in all_sites:
+                    for k in site['top_kinases']:
+                        if k['kinase'] == kinase_data['kinase']:
+                            proteins_with_kinase.add(site['gene_symbol'])
+                kinase_data['protein_count'] = len(proteins_with_kinase)
+                enriched_kinases.append(kinase_data)
 
-        # Pathway-wide kinase enrichment analysis
-        pathway_kinase_scores = {}
-        significant_sites = [s for s in all_sites if s['significant_fdr05']]
+        # Sort kinases by site count
+        enriched_kinases.sort(key=lambda x: x['site_count'], reverse=True)
 
-        for kinase_col in kinase_columns:
-            kinase_name = kinase_col.replace('_MotifScore', '')
-
-            # Get scores for significant sites only
-            scores = [s[kinase_col] for s in significant_sites if s[kinase_col] is not None and s[kinase_col] > 0]
-
-            if len(scores) >= 3:  # Minimum threshold for meaningful analysis
-                pathway_kinase_scores[kinase_name] = {
-                    'avg_score': sum(scores) / len(scores),
-                    'max_score': max(scores),
-                    'site_count': len(scores),
-                    'protein_count': len(
-                        set(s['gene_symbol'] for s in significant_sites if s[kinase_col] and s[kinase_col] > 0)),
-                    'high_scoring_sites': len([s for s in scores if s > 0.7])
-                }
-
-        # Rank pathway-wide kinases
-        enriched_kinases = sorted(
-            pathway_kinase_scores.items(),
-            key=lambda x: (x[1]['avg_score'], x[1]['site_count']),
-            reverse=True
-        )[:20]
-
-        # Pathway-wide statistics
+        # Calculate pathway-wide statistics
         pathway_stats = {
             'total_proteins': len(proteins_data),
             'total_sites': len(all_sites),
-            'significant_sites': len(significant_sites),
-            'high_confidence_sites': len([s for s in all_sites if (s['predicted_prob_calibrated'] or 0) > 0.8]),
+            'significant_sites': sum(1 for s in all_sites if s['significant_fdr05']),
+            'high_confidence_sites': sum(1 for s in all_sites if (s['predicted_prob_calibrated'] or 0) > 0.8),
             'avg_confidence': sum(s['predicted_prob_calibrated'] or 0 for s in all_sites) / len(all_sites),
-            'serine_sites': len([s for s in all_sites if s['residue_type'] == 'S']),
-            'threonine_sites': len([s for s in all_sites if s['residue_type'] == 'T']),
-            'tyrosine_sites': len([s for s in all_sites if s['residue_type'] == 'Y'])
+            'serine_sites': sum(1 for s in all_sites if s['residue_type'] == 'S'),
+            'threonine_sites': sum(1 for s in all_sites if s['residue_type'] == 'T'),
+            'tyrosine_sites': sum(1 for s in all_sites if s['residue_type'] == 'Y')
+        }
+
+        # Structural feature aggregations
+        structural_stats = {
+            'avg_plddt': sum(s['plddt'] or 0 for s in all_sites if s['plddt']) / len(
+                [s for s in all_sites if s['plddt']]) if any(s['plddt'] for s in all_sites) else 0,
+            'avg_sasa_ratio': sum(s['sasa_ratio'] or 0 for s in all_sites if s['sasa_ratio']) / len(
+                [s for s in all_sites if s['sasa_ratio']]) if any(s['sasa_ratio'] for s in all_sites) else 0,
+            'avg_disorder': sum(s['disorder_score'] or 0 for s in all_sites if s['disorder_score']) / len(
+                [s for s in all_sites if s['disorder_score']]) if any(s['disorder_score'] for s in all_sites) else 0,
         }
 
         # Secondary structure distribution
@@ -564,11 +552,11 @@ def get_pathway_analysis(pathway_id):
             structure_distribution[struct] = structure_distribution.get(struct, 0) + 1
 
         # Confidence distribution bins
-        confidence_bins = {'<0.3': 0, '0.3-0.5': 0, '0.5-0.7': 0, '0.7-0.9': 0, '>0.9': 0}
+        confidence_bins = {'0.0-0.3': 0, '0.3-0.5': 0, '0.5-0.7': 0, '0.7-0.9': 0, '0.9-1.0': 0}
         for site in all_sites:
             conf = site['predicted_prob_calibrated'] or 0
             if conf < 0.3:
-                confidence_bins['<0.3'] += 1
+                confidence_bins['0.0-0.3'] += 1
             elif conf < 0.5:
                 confidence_bins['0.3-0.5'] += 1
             elif conf < 0.7:
@@ -576,23 +564,15 @@ def get_pathway_analysis(pathway_id):
             elif conf < 0.9:
                 confidence_bins['0.7-0.9'] += 1
             else:
-                confidence_bins['>0.9'] += 1
+                confidence_bins['0.9-1.0'] += 1
 
         return jsonify({
             'pathway': dict(pathway),
             'proteins': [proteins_data[gene] for gene in sorted(proteins_data.keys())],
-            'enriched_kinases': [
-                {
-                    'kinase': k,
-                    'avg_score': round(v['avg_score'], 3),
-                    'max_score': round(v['max_score'], 3),
-                    'site_count': v['site_count'],
-                    'protein_count': v['protein_count'],
-                    'high_scoring_sites': v['high_scoring_sites']
-                }
-                for k, v in enriched_kinases
-            ],
+            'all_sites': all_sites,  # For site-level view
+            'enriched_kinases': enriched_kinases[:50],  # Top 50 kinases
             'pathway_stats': pathway_stats,
+            'structural_stats': structural_stats,
             'structure_distribution': structure_distribution,
             'confidence_distribution': confidence_bins,
             'analysis_metadata': {

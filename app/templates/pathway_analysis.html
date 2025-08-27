@@ -23,24 +23,10 @@
         overflow: hidden;
     }
 
-    .analysis-header::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: radial-gradient(600px circle at 30% 20%, rgba(59, 130, 246, 0.1), transparent),
-                    radial-gradient(800px circle at 70% 80%, rgba(139, 92, 246, 0.1), transparent);
-        pointer-events: none;
-    }
-
     .pathway-title {
         font-size: 2.5rem;
         font-weight: 700;
         margin-bottom: 1rem;
-        position: relative;
-        z-index: 10;
         color: var(--text-primary);
     }
 
@@ -48,62 +34,98 @@
         color: var(--text-secondary);
         font-size: 1.1rem;
         margin-bottom: 2rem;
-        position: relative;
-        z-index: 10;
     }
 
-    .pathway-collection-badge {
-        background: var(--gradient-primary);
-        color: white;
-        padding: 0.5rem 1.5rem;
-        border-radius: 25px;
-        font-size: 0.9rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        position: relative;
-        z-index: 10;
-        display: inline-block;
-        margin-bottom: 2rem;
-    }
-
-    .analysis-actions {
-        display: flex;
-        gap: 1rem;
-        justify-content: center;
-        position: relative;
-        z-index: 10;
-    }
-
-    /* View Switcher */
-    .view-switcher {
+    /* Interactive Controls */
+    .controls-panel {
         background: var(--glass-bg);
         border-radius: 16px;
-        padding: 1.5rem;
+        padding: 2rem;
         margin-bottom: 2rem;
         border: 1px solid var(--border-color);
         backdrop-filter: blur(20px);
     }
 
-    .view-tabs {
+    .controls-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 2rem;
+        align-items: center;
+    }
+
+    .control-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .control-label {
+        font-weight: 600;
+        color: var(--text-primary);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .control-value {
+        color: var(--accent-blue);
+        font-family: 'JetBrains Mono', monospace;
+        font-weight: 700;
+    }
+
+    .slider-container {
+        position: relative;
+    }
+
+    .slider {
+        width: 100%;
+        height: 6px;
+        border-radius: 3px;
+        background: rgba(255, 255, 255, 0.1);
+        outline: none;
+        -webkit-appearance: none;
+    }
+
+    .slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: var(--accent-blue);
+        cursor: pointer;
+        box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+    }
+
+    .slider::-moz-range-thumb {
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: var(--accent-blue);
+        cursor: pointer;
+        border: none;
+    }
+
+    /* View Switcher */
+    .view-switcher {
         display: flex;
         gap: 1rem;
         justify-content: center;
-        margin-bottom: 1rem;
+        margin-bottom: 2rem;
     }
 
     .view-tab {
-        padding: 0.75rem 1.5rem;
+        padding: 0.75rem 2rem;
         background: rgba(255, 255, 255, 0.05);
         border: 1px solid var(--border-color);
-        border-radius: 8px;
+        border-radius: 10px;
         color: var(--text-secondary);
         cursor: pointer;
         transition: var(--transition-smooth);
         font-weight: 500;
-        text-align: center;
-        flex: 1;
-        max-width: 200px;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
     }
 
     .view-tab:hover {
@@ -115,12 +137,6 @@
         background: var(--accent-blue);
         color: white;
         border-color: var(--accent-blue);
-    }
-
-    .view-description {
-        text-align: center;
-        color: var(--text-secondary);
-        font-size: 0.875rem;
     }
 
     /* Summary Stats */
@@ -139,29 +155,11 @@
         border: 1px solid var(--border-color);
         text-align: center;
         transition: var(--transition-smooth);
-        position: relative;
-        overflow: hidden;
-    }
-
-    .stat-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 2px;
-        background: var(--gradient-accent);
-        transform: scaleX(0);
-        transition: var(--transition-smooth);
     }
 
     .stat-card:hover {
         transform: translateY(-4px);
         box-shadow: var(--shadow-elevated);
-    }
-
-    .stat-card:hover::before {
-        transform: scaleX(1);
     }
 
     .stat-number {
@@ -180,184 +178,6 @@
         font-size: 0.875rem;
     }
 
-    .stat-sublabel {
-        color: var(--text-muted);
-        font-size: 0.75rem;
-        margin-top: 0.25rem;
-    }
-
-    /* Protein Cards Grid */
-    .proteins-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
-        gap: 2rem;
-        margin-bottom: 3rem;
-    }
-
-    .protein-card {
-        background: var(--glass-bg);
-        border-radius: 16px;
-        padding: 2rem;
-        backdrop-filter: blur(20px);
-        border: 1px solid var(--border-color);
-        transition: var(--transition-smooth);
-        position: relative;
-        overflow: hidden;
-    }
-
-    .protein-card:hover {
-        transform: translateY(-4px);
-        box-shadow: var(--shadow-elevated);
-        border-color: rgba(255, 255, 255, 0.2);
-    }
-
-    .protein-header {
-        display: flex;
-        justify-content: between;
-        align-items: center;
-        margin-bottom: 1.5rem;
-        padding-bottom: 1rem;
-        border-bottom: 1px solid var(--border-color);
-    }
-
-    .protein-name {
-        font-size: 1.5rem;
-        font-weight: 700;
-        color: var(--text-primary);
-        font-family: 'JetBrains Mono', monospace;
-    }
-
-    .protein-stats {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 0.5rem;
-        font-size: 0.75rem;
-        color: var(--text-secondary);
-    }
-
-    .protein-stat {
-        text-align: center;
-    }
-
-    .protein-stat .number {
-        font-weight: 700;
-        color: var(--text-primary);
-        font-size: 1rem;
-    }
-
-    /* Protein Linear View */
-    .protein-sequence {
-        position: relative;
-        height: 100px;
-        margin: 1.5rem 0;
-        background: rgba(255, 255, 255, 0.03);
-        border-radius: 10px;
-        overflow: hidden;
-    }
-
-    .sequence-backbone {
-        position: absolute;
-        top: 50%;
-        left: 5%;
-        right: 5%;
-        height: 6px;
-        background: var(--gradient-secondary);
-        border-radius: 3px;
-        transform: translateY(-50%);
-    }
-
-    .phospho-site {
-        position: absolute;
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-        top: 50%;
-        transform: translateY(-50%);
-        cursor: pointer;
-        transition: var(--transition-smooth);
-        border: 2px solid white;
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-        z-index: 5;
-    }
-
-    .phospho-site:hover {
-        transform: translateY(-50%) scale(1.8);
-        z-index: 10;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
-    }
-
-    .phospho-site.high-confidence { background: #10b981; }
-    .phospho-site.medium-confidence { background: #f59e0b; }
-    .phospho-site.low-confidence { background: #ef4444; }
-
-    .phospho-site.significant {
-        border-width: 3px;
-        border-color: #3b82f6;
-    }
-
-    /* Site Tooltip */
-    .site-tooltip {
-        position: absolute;
-        background: var(--secondary-bg);
-        border: 1px solid var(--border-color);
-        border-radius: 8px;
-        padding: 1rem;
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
-        z-index: 1000;
-        pointer-events: none;
-        opacity: 0;
-        transform: translateY(10px);
-        transition: var(--transition-smooth);
-        min-width: 250px;
-    }
-
-    .site-tooltip.active {
-        opacity: 1;
-        transform: translateY(0);
-    }
-
-    .tooltip-header {
-        font-weight: 700;
-        color: var(--text-primary);
-        margin-bottom: 0.5rem;
-        font-family: 'JetBrains Mono', monospace;
-    }
-
-    .tooltip-confidence {
-        color: var(--text-secondary);
-        margin-bottom: 1rem;
-        font-size: 0.875rem;
-    }
-
-    .tooltip-kinases {
-        border-top: 1px solid var(--border-color);
-        padding-top: 1rem;
-    }
-
-    .tooltip-kinases h4 {
-        font-size: 0.875rem;
-        color: var(--text-primary);
-        margin-bottom: 0.5rem;
-    }
-
-    .kinase-score {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 0.25rem;
-        font-size: 0.8rem;
-    }
-
-    .kinase-name {
-        font-family: 'JetBrains Mono', monospace;
-        color: var(--text-primary);
-    }
-
-    .score-value {
-        color: var(--accent-blue);
-        font-weight: 600;
-    }
-
     /* Charts Grid */
     .charts-grid {
         display: grid;
@@ -374,10 +194,6 @@
         border: 1px solid var(--border-color);
     }
 
-    .chart-card.full-width {
-        grid-column: 1 / -1;
-    }
-
     .chart-title {
         font-size: 1.25rem;
         font-weight: 600;
@@ -386,75 +202,220 @@
         color: var(--text-primary);
     }
 
-    .chart-container {
-        position: relative;
-        height: 400px;
+    /* Protein Cards */
+    .proteins-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(600px, 1fr));
+        gap: 2rem;
     }
 
-    .chart-container.tall {
-        height: 500px;
-    }
-
-    /* Kinase Analysis */
-    .kinase-analysis {
+    .protein-card {
         background: var(--glass-bg);
         border-radius: 16px;
         padding: 2rem;
         backdrop-filter: blur(20px);
         border: 1px solid var(--border-color);
-        margin-bottom: 3rem;
-    }
-
-    .kinases-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-        gap: 1rem;
-        margin-top: 1.5rem;
-    }
-
-    .kinase-item {
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid var(--border-color);
-        border-radius: 8px;
-        padding: 1rem;
         transition: var(--transition-smooth);
     }
 
-    .kinase-item:hover {
-        background: rgba(255, 255, 255, 0.1);
-        border-color: var(--accent-blue);
-    }
-
-    .kinase-header {
+    .protein-header {
         display: flex;
-        justify-content: between;
+        justify-content: space-between;
         align-items: center;
-        margin-bottom: 0.5rem;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid var(--border-color);
     }
 
-    .kinase-name-main {
-        font-weight: 600;
+    .protein-name {
+        font-size: 1.5rem;
+        font-weight: 700;
         color: var(--text-primary);
         font-family: 'JetBrains Mono', monospace;
     }
 
-    .kinase-score-main {
-        color: var(--accent-blue);
+    .protein-stats {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1rem;
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+    }
+
+    .protein-stat {
+        text-align: center;
+        padding: 0.5rem;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 8px;
+    }
+
+    .protein-stat .number {
         font-weight: 700;
+        color: var(--text-primary);
         font-family: 'JetBrains Mono', monospace;
     }
 
-    .kinase-details {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 0.5rem;
-        font-size: 0.75rem;
-        color: var(--text-secondary);
-        margin-top: 0.5rem;
+    /* Protein Linear View */
+    .protein-sequence {
+        position: relative;
+        height: 120px;
+        margin: 2rem 0;
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: 10px;
+        overflow: hidden;
     }
 
-    /* Loading State */
-    .analysis-loading {
+    .sequence-backbone {
+        position: absolute;
+        top: 50%;
+        left: 5%;
+        right: 5%;
+        height: 8px;
+        background: var(--gradient-secondary);
+        border-radius: 4px;
+        transform: translateY(-50%);
+    }
+
+    .phospho-site {
+        position: absolute;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        top: 50%;
+        transform: translateY(-50%);
+        cursor: pointer;
+        transition: var(--transition-smooth);
+        border: 2px solid white;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    .phospho-site:hover {
+        transform: translateY(-50%) scale(1.8);
+        z-index: 10;
+    }
+
+    .phospho-site.high-confidence { background: var(--accent-green); }
+    .phospho-site.medium-confidence { background: var(--accent-orange); }
+    .phospho-site.low-confidence { background: var(--accent-pink); }
+
+    .phospho-site.significant {
+        border-width: 3px;
+        border-color: var(--accent-blue);
+    }
+
+    /* Sites Table */
+    .sites-table-container {
+        background: var(--glass-bg);
+        border-radius: 16px;
+        padding: 2rem;
+        backdrop-filter: blur(20px);
+        border: 1px solid var(--border-color);
+        overflow-x: auto;
+    }
+
+    .sites-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .sites-table th,
+    .sites-table td {
+        padding: 1rem;
+        text-align: left;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .sites-table th {
+        background: rgba(255, 255, 255, 0.05);
+        font-weight: 600;
+        color: var(--text-primary);
+        position: sticky;
+        top: 0;
+        cursor: pointer;
+        transition: var(--transition-smooth);
+    }
+
+    .sites-table th:hover {
+        background: rgba(255, 255, 255, 0.1);
+    }
+
+    .sites-table tr:hover {
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    .kinase-scores {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .kinase-score {
+        background: var(--gradient-accent);
+        color: white;
+        padding: 0.25rem 0.5rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Kinase Cards */
+    .kinases-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 2rem;
+    }
+
+    .kinase-card {
+        background: var(--glass-bg);
+        border-radius: 16px;
+        padding: 2rem;
+        backdrop-filter: blur(20px);
+        border: 1px solid var(--border-color);
+        transition: var(--transition-smooth);
+    }
+
+    .kinase-card:hover {
+        transform: translateY(-4px);
+        border-color: var(--accent-blue);
+    }
+
+    .kinase-name {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        font-family: 'JetBrains Mono', monospace;
+        margin-bottom: 1rem;
+    }
+
+    .kinase-stats {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+        text-align: center;
+    }
+
+    .kinase-stat {
+        padding: 0.75rem;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 8px;
+    }
+
+    .kinase-stat .number {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        font-family: 'JetBrains Mono', monospace;
+    }
+
+    .kinase-stat .label {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        margin-top: 0.25rem;
+    }
+
+    /* Loading and Empty States */
+    .loading-state {
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -474,7 +435,7 @@
     }
 
     /* Responsive Design */
-    @media (max-width: 1200px) {
+    @media (max-width: 768px) {
         .charts-grid {
             grid-template-columns: 1fr;
         }
@@ -482,32 +443,17 @@
         .proteins-grid {
             grid-template-columns: 1fr;
         }
-    }
 
-    @media (max-width: 768px) {
-        .analysis-container {
-            padding: 1rem;
+        .controls-grid {
+            grid-template-columns: 1fr;
         }
 
-        .summary-stats {
-            grid-template-columns: repeat(2, 1fr);
-        }
-
-        .analysis-actions {
+        .view-switcher {
             flex-direction: column;
-            gap: 0.5rem;
         }
 
         .protein-stats {
             grid-template-columns: repeat(2, 1fr);
-        }
-
-        .view-tabs {
-            flex-direction: column;
-        }
-
-        .kinases-grid {
-            grid-template-columns: 1fr;
         }
     }
 </style>
@@ -516,7 +462,7 @@
 {% block content %}
 <div class="analysis-container">
     <!-- Loading State -->
-    <div id="loading-state" class="analysis-loading">
+    <div id="loading-state" class="loading-state">
         <div class="loading-spinner-large"></div>
         <h3>Analyzing Pathway Phosphoproteome</h3>
         <p>Computing kinase enrichment and site statistics...</p>
@@ -529,49 +475,67 @@
             <div class="pathway-collection-badge" id="pathway-collection"></div>
             <h1 class="pathway-title" id="pathway-title">Pathway Analysis</h1>
             <p class="pathway-subtitle" id="pathway-description"></p>
+        </div>
 
-            <div class="analysis-actions">
-                <button class="btn btn-primary" onclick="downloadReport()">
-                    <i class="fas fa-download"></i>
-                    Download Report
-                </button>
-                <button class="btn btn-secondary" onclick="exportData()">
-                    <i class="fas fa-table"></i>
-                    Export Data
-                </button>
-                <button class="btn btn-secondary" onclick="sharePNG()">
-                    <i class="fas fa-image"></i>
-                    Save Figures
-                </button>
+        <!-- Interactive Controls -->
+        <div class="controls-panel">
+            <h3 style="margin-bottom: 1.5rem; color: var(--text-primary);">
+                <i class="fas fa-sliders-h"></i> Interactive Filtering
+            </h3>
+            <div class="controls-grid">
+                <div class="control-group">
+                    <div class="control-label">
+                        Confidence Threshold
+                        <span class="control-value" id="confidence-value">0.5</span>
+                    </div>
+                    <input type="range" id="confidence-slider" class="slider"
+                           min="0" max="1" step="0.01" value="0.5">
+                </div>
+                <div class="control-group">
+                    <div class="control-label">
+                        Q-value Threshold
+                        <span class="control-value" id="qvalue-value">0.05</span>
+                    </div>
+                    <input type="range" id="qvalue-slider" class="slider"
+                           min="0.001" max="0.1" step="0.001" value="0.05">
+                </div>
+                <div class="control-group">
+                    <div class="control-label">
+                        Residue Type
+                        <span class="control-value" id="residue-count">All</span>
+                    </div>
+                    <select id="residue-filter" class="form-select">
+                        <option value="all">All Residues</option>
+                        <option value="S">Serine (S)</option>
+                        <option value="T">Threonine (T)</option>
+                        <option value="Y">Tyrosine (Y)</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <button class="btn btn-primary" onclick="resetFilters()">
+                        <i class="fas fa-undo"></i> Reset Filters
+                    </button>
+                </div>
             </div>
         </div>
 
         <!-- View Switcher -->
         <div class="view-switcher">
-            <div class="view-tabs">
-                <div class="view-tab active" data-view="overview" onclick="switchView('overview')">
-                    <i class="fas fa-chart-pie"></i>
-                    <div>Overview</div>
-                </div>
-                <div class="view-tab" data-view="proteins" onclick="switchView('proteins')">
-                    <i class="fas fa-dna"></i>
-                    <div>Protein-Level</div>
-                </div>
-                <div class="view-tab" data-view="sites" onclick="switchView('sites')">
-                    <i class="fas fa-dot-circle"></i>
-                    <div>Site-Level</div>
-                </div>
-                <div class="view-tab" data-view="kinases" onclick="switchView('kinases')">
-                    <i class="fas fa-cogs"></i>
-                    <div>Kinase-Centric</div>
-                </div>
+            <div class="view-tab active" data-view="overview" onclick="switchView('overview')">
+                <i class="fas fa-chart-pie"></i> Overview
             </div>
-            <div class="view-description" id="view-description">
-                Comprehensive pathway phosphoproteomics analysis with interactive visualizations
+            <div class="view-tab" data-view="proteins" onclick="switchView('proteins')">
+                <i class="fas fa-dna"></i> Protein-Level
+            </div>
+            <div class="view-tab" data-view="sites" onclick="switchView('sites')">
+                <i class="fas fa-dot-circle"></i> Site-Level
+            </div>
+            <div class="view-tab" data-view="kinases" onclick="switchView('kinases')">
+                <i class="fas fa-cogs"></i> Kinase-Centric
             </div>
         </div>
 
-        <!-- Summary Statistics -->
+        <!-- Summary Statistics (Always Visible) -->
         <div class="summary-stats" id="summary-stats">
             <!-- Stats will be populated here -->
         </div>
@@ -579,36 +543,21 @@
         <!-- Overview View -->
         <div class="view-content" id="overview-view">
             <div class="charts-grid">
-                <!-- Confidence Distribution -->
                 <div class="chart-card">
-                    <h3 class="chart-title">Phospho-Competency Distribution</h3>
-                    <div class="chart-container">
-                        <canvas id="confidence-chart"></canvas>
-                    </div>
+                    <h3 class="chart-title">Confidence Distribution</h3>
+                    <canvas id="confidence-chart"></canvas>
                 </div>
-
-                <!-- Residue Type Distribution -->
                 <div class="chart-card">
                     <h3 class="chart-title">Residue Type Distribution</h3>
-                    <div class="chart-container">
-                        <canvas id="residue-chart"></canvas>
-                    </div>
+                    <canvas id="residue-chart"></canvas>
                 </div>
-
-                <!-- Secondary Structure Distribution -->
                 <div class="chart-card">
                     <h3 class="chart-title">Secondary Structure Context</h3>
-                    <div class="chart-container">
-                        <canvas id="structure-chart"></canvas>
-                    </div>
+                    <canvas id="structure-chart"></canvas>
                 </div>
-
-                <!-- Top Enriched Kinases -->
                 <div class="chart-card">
                     <h3 class="chart-title">Top Enriched Kinases</h3>
-                    <div class="chart-container">
-                        <canvas id="kinase-chart"></canvas>
-                    </div>
+                    <canvas id="kinase-chart"></canvas>
                 </div>
             </div>
         </div>
@@ -622,32 +571,33 @@
 
         <!-- Site-Level View -->
         <div class="view-content" id="sites-view" style="display: none;">
-            <div class="chart-card">
+            <div class="sites-table-container">
                 <h3 class="chart-title">All Phosphorylation Sites</h3>
-                <div id="sites-table-container">
-                    <!-- Sites table will be populated here -->
-                </div>
+                <table class="sites-table" id="sites-table">
+                    <thead>
+                        <tr>
+                            <th onclick="sortTable(0)">Site ID <i class="fas fa-sort"></i></th>
+                            <th onclick="sortTable(1)">Protein <i class="fas fa-sort"></i></th>
+                            <th onclick="sortTable(2)">Position <i class="fas fa-sort"></i></th>
+                            <th onclick="sortTable(3)">Type <i class="fas fa-sort"></i></th>
+                            <th onclick="sortTable(4)">Confidence <i class="fas fa-sort"></i></th>
+                            <th onclick="sortTable(5)">Q-value <i class="fas fa-sort"></i></th>
+                            <th onclick="sortTable(6)">Structure <i class="fas fa-sort"></i></th>
+                            <th>Top Kinases</th>
+                        </tr>
+                    </thead>
+                    <tbody id="sites-table-body">
+                        <!-- Sites will be populated here -->
+                    </tbody>
+                </table>
             </div>
         </div>
 
         <!-- Kinase-Centric View -->
         <div class="view-content" id="kinases-view" style="display: none;">
-            <div class="kinase-analysis">
-                <h3 class="chart-title">Enriched Kinases Analysis</h3>
-                <div class="kinases-grid" id="kinases-grid">
-                    <!-- Kinase items will be populated here -->
-                </div>
+            <div class="kinases-grid" id="kinases-grid">
+                <!-- Kinase cards will be populated here -->
             </div>
-        </div>
-    </div>
-
-    <!-- Site Tooltip -->
-    <div class="site-tooltip" id="site-tooltip">
-        <div class="tooltip-header" id="tooltip-header"></div>
-        <div class="tooltip-confidence" id="tooltip-confidence"></div>
-        <div class="tooltip-kinases">
-            <h4>Top Kinase Predictions</h4>
-            <div id="tooltip-kinases-list"></div>
         </div>
     </div>
 </div>
@@ -655,12 +605,19 @@
 
 {% block extra_js %}
 <script>
-    class PathwayAnalysis {
+    class AdvancedPathwayAnalysis {
         constructor(pathwayId) {
             this.pathwayId = pathwayId;
             this.analysisData = null;
+            this.filteredData = null;
             this.charts = {};
             this.currentView = 'overview';
+
+            this.filters = {
+                confidence: 0.5,
+                qvalue: 0.05,
+                residueType: 'all'
+            };
 
             this.init();
         }
@@ -668,6 +625,8 @@
         async init() {
             await this.loadAnalysisData();
             if (this.analysisData) {
+                this.setupEventListeners();
+                this.applyFilters();
                 this.renderAnalysis();
             }
         }
@@ -691,9 +650,100 @@
             }
         }
 
-        renderAnalysis() {
+        setupEventListeners() {
+            // Confidence slider
+            const confidenceSlider = document.getElementById('confidence-slider');
+            confidenceSlider.addEventListener('input', (e) => {
+                this.filters.confidence = parseFloat(e.target.value);
+                document.getElementById('confidence-value').textContent = e.target.value;
+                this.applyFilters();
+            });
+
+            // Q-value slider
+            const qvalueSlider = document.getElementById('qvalue-slider');
+            qvalueSlider.addEventListener('input', (e) => {
+                this.filters.qvalue = parseFloat(e.target.value);
+                document.getElementById('qvalue-value').textContent = e.target.value;
+                this.applyFilters();
+            });
+
+            // Residue filter
+            document.getElementById('residue-filter').addEventListener('change', (e) => {
+                this.filters.residueType = e.target.value;
+                this.applyFilters();
+            });
+        }
+
+        applyFilters() {
             if (!this.analysisData) return;
 
+            // Filter all sites based on current criteria
+            this.filteredData = {
+                ...this.analysisData,
+                all_sites: this.analysisData.all_sites.filter(site => {
+                    const conf = site.predicted_prob_calibrated || 0;
+                    const qval = site.qvalue || 1;
+                    const residue = site.residue_type;
+
+                    if (conf < this.filters.confidence) return false;
+                    if (qval > this.filters.qvalue) return false;
+                    if (this.filters.residueType !== 'all' && residue !== this.filters.residueType) return false;
+
+                    return true;
+                }),
+                proteins: this.analysisData.proteins.map(protein => ({
+                    ...protein,
+                    sites: protein.sites.filter(site => {
+                        const conf = site.predicted_prob_calibrated || 0;
+                        const qval = site.qvalue || 1;
+                        const residue = site.residue_type;
+
+                        if (conf < this.filters.confidence) return false;
+                        if (qval > this.filters.qvalue) return false;
+                        if (this.filters.residueType !== 'all' && residue !== this.filters.residueType) return false;
+
+                        return true;
+                    })
+                })).filter(protein => protein.sites.length > 0)
+            };
+
+            // Update statistics
+            this.updateFilteredStats();
+            this.renderCurrentView();
+        }
+
+        updateFilteredStats() {
+            const sites = this.filteredData.all_sites;
+
+            const stats = {
+                total_proteins: this.filteredData.proteins.length,
+                total_sites: sites.length,
+                significant_sites: sites.filter(s => s.significant_fdr05).length,
+                high_confidence_sites: sites.filter(s => (s.predicted_prob_calibrated || 0) > 0.8).length,
+                avg_confidence: sites.length > 0 ? sites.reduce((sum, s) => sum + (s.predicted_prob_calibrated || 0), 0) / sites.length : 0,
+                serine_sites: sites.filter(s => s.residue_type === 'S').length,
+                threonine_sites: sites.filter(s => s.residue_type === 'T').length,
+                tyrosine_sites: sites.filter(s => s.residue_type === 'Y').length
+            };
+
+            // Structural features
+            const validSites = sites.filter(s => s.plddt !== null && s.plddt !== undefined);
+            const sasaSites = sites.filter(s => s.sasa_ratio !== null && s.sasa_ratio !== undefined);
+            const disorderSites = sites.filter(s => s.disorder_score !== null && s.disorder_score !== undefined);
+
+            const structuralStats = {
+                avg_plddt: validSites.length > 0 ? validSites.reduce((sum, s) => sum + s.plddt, 0) / validSites.length : 0,
+                avg_sasa_ratio: sasaSites.length > 0 ? sasaSites.reduce((sum, s) => sum + s.sasa_ratio, 0) / sasaSites.length : 0,
+                avg_disorder: disorderSites.length > 0 ? disorderSites.reduce((sum, s) => sum + s.disorder_score, 0) / disorderSites.length : 0
+            };
+
+            this.filteredData.pathway_stats = stats;
+            this.filteredData.structural_stats = structuralStats;
+
+            this.updateSummaryStats();
+        }
+
+        renderAnalysis() {
             // Hide loading, show content
             document.getElementById('loading-state').style.display = 'none';
             document.getElementById('analysis-content').style.display = 'block';
@@ -701,14 +751,8 @@
             // Populate header
             this.populateHeader();
 
-            // Create summary statistics
-            this.createSummaryStats();
-
             // Render all views
-            this.renderOverviewCharts();
-            this.renderProteinCards();
-            this.renderSitesTable();
-            this.renderKinasesGrid();
+            this.renderCurrentView();
         }
 
         populateHeader() {
@@ -720,37 +764,53 @@
                 pathway.gs_description || 'Comprehensive phosphoproteomics analysis';
         }
 
-        createSummaryStats() {
-            const { pathway_stats } = this.analysisData;
+        updateSummaryStats() {
+            const { pathway_stats, structural_stats } = this.filteredData;
 
             const statsContainer = document.getElementById('summary-stats');
             statsContainer.innerHTML = `
                 <div class="stat-card">
                     <div class="stat-number">${this.formatNumber(pathway_stats.total_proteins)}</div>
                     <div class="stat-label">Proteins</div>
-                    <div class="stat-sublabel">with phospho sites</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-number">${this.formatNumber(pathway_stats.total_sites)}</div>
-                    <div class="stat-label">Phospho Sites</div>
-                    <div class="stat-sublabel">S/T/Y residues</div>
+                    <div class="stat-label">Filtered Sites</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-number">${this.formatNumber(pathway_stats.significant_sites)}</div>
                     <div class="stat-label">Significant</div>
-                    <div class="stat-sublabel">FDR < 0.05</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number">${this.formatNumber(pathway_stats.high_confidence_sites)}</div>
-                    <div class="stat-label">High Confidence</div>
-                    <div class="stat-sublabel">Prob > 0.8</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-number">${(pathway_stats.avg_confidence * 100).toFixed(1)}%</div>
                     <div class="stat-label">Avg Confidence</div>
-                    <div class="stat-sublabel">pathway-wide</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${structural_stats.avg_plddt.toFixed(0)}</div>
+                    <div class="stat-label">Avg pLDDT</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${(structural_stats.avg_sasa_ratio * 100).toFixed(0)}%</div>
+                    <div class="stat-label">Avg SASA</div>
                 </div>
             `;
+        }
+
+        renderCurrentView() {
+            switch (this.currentView) {
+                case 'overview':
+                    this.renderOverviewCharts();
+                    break;
+                case 'proteins':
+                    this.renderProteinCards();
+                    break;
+                case 'sites':
+                    this.renderSitesTable();
+                    break;
+                case 'kinases':
+                    this.renderKinasesGrid();
+                    break;
+            }
         }
 
         renderOverviewCharts() {
@@ -764,7 +824,17 @@
             const ctx = document.getElementById('confidence-chart')?.getContext('2d');
             if (!ctx) return;
 
-            const { confidence_distribution } = this.analysisData;
+            const sites = this.filteredData.all_sites;
+            const bins = [0, 0, 0, 0, 0]; // 0-0.2, 0.2-0.4, 0.4-0.6, 0.6-0.8, 0.8-1.0
+
+            sites.forEach(site => {
+                const conf = site.predicted_prob_calibrated || 0;
+                if (conf < 0.2) bins[0]++;
+                else if (conf < 0.4) bins[1]++;
+                else if (conf < 0.6) bins[2]++;
+                else if (conf < 0.8) bins[3]++;
+                else bins[4]++;
+            });
 
             if (this.charts.confidence) {
                 this.charts.confidence.destroy();
@@ -773,10 +843,10 @@
             this.charts.confidence = new Chart(ctx, {
                 type: 'bar',
                 data: {
-                    labels: Object.keys(confidence_distribution),
+                    labels: ['0-0.2', '0.2-0.4', '0.4-0.6', '0.6-0.8', '0.8-1.0'],
                     datasets: [{
-                        label: 'Number of Sites',
-                        data: Object.values(confidence_distribution),
+                        label: 'Site Count',
+                        data: bins,
                         backgroundColor: [
                             'rgba(239, 68, 68, 0.8)',
                             'rgba(245, 158, 11, 0.8)',
@@ -784,14 +854,6 @@
                             'rgba(16, 185, 129, 0.8)',
                             'rgba(34, 197, 94, 0.8)'
                         ],
-                        borderColor: [
-                            'rgb(239, 68, 68)',
-                            'rgb(245, 158, 11)',
-                            'rgb(59, 130, 246)',
-                            'rgb(16, 185, 129)',
-                            'rgb(34, 197, 94)'
-                        ],
-                        borderWidth: 2,
                         borderRadius: 8
                     }]
                 },
@@ -803,11 +865,11 @@
                     },
                     scales: {
                         x: {
-                            ticks: { color: '#8b9dc3', font: { family: 'Inter' } },
+                            ticks: { color: '#8b9dc3' },
                             grid: { color: 'rgba(255, 255, 255, 0.1)' }
                         },
                         y: {
-                            ticks: { color: '#8b9dc3', font: { family: 'Inter' } },
+                            ticks: { color: '#8b9dc3' },
                             grid: { color: 'rgba(255, 255, 255, 0.1)' }
                         }
                     }
@@ -819,7 +881,7 @@
             const ctx = document.getElementById('residue-chart')?.getContext('2d');
             if (!ctx) return;
 
-            const { pathway_stats } = this.analysisData;
+            const { pathway_stats } = this.filteredData;
 
             if (this.charts.residue) {
                 this.charts.residue.destroy();
@@ -828,18 +890,13 @@
             this.charts.residue = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
-                    labels: ['Serine', 'Threonine', 'Tyrosine'],
+                    labels: ['Serine (S)', 'Threonine (T)', 'Tyrosine (Y)'],
                     datasets: [{
                         data: [pathway_stats.serine_sites, pathway_stats.threonine_sites, pathway_stats.tyrosine_sites],
                         backgroundColor: [
                             'rgba(59, 130, 246, 0.8)',
                             'rgba(139, 92, 246, 0.8)',
                             'rgba(236, 72, 153, 0.8)'
-                        ],
-                        borderColor: [
-                            'rgb(59, 130, 246)',
-                            'rgb(139, 92, 246)',
-                            'rgb(236, 72, 153)'
                         ],
                         borderWidth: 2
                     }]
@@ -850,12 +907,7 @@
                     plugins: {
                         legend: {
                             position: 'bottom',
-                            labels: {
-                                color: '#8b9dc3',
-                                font: { family: 'Inter' },
-                                usePointStyle: true,
-                                padding: 15
-                            }
+                            labels: { color: '#8b9dc3', font: { family: 'Inter' } }
                         }
                     }
                 }
@@ -866,11 +918,12 @@
             const ctx = document.getElementById('structure-chart')?.getContext('2d');
             if (!ctx) return;
 
-            const { structure_distribution } = this.analysisData;
+            const sites = this.filteredData.all_sites;
+            const structures = { 'H': 0, 'E': 0, 'C': 0, 'Unknown': 0 };
 
-            const labels = Object.keys(structure_distribution).map(key => {
-                const mapping = { 'H': 'Helix', 'E': 'Strand', 'C': 'Coil', 'Unknown': 'Unknown' };
-                return mapping[key] || key;
+            sites.forEach(site => {
+                const struct = site.secondary_structure || 'Unknown';
+                structures[struct] = (structures[struct] || 0) + 1;
             });
 
             if (this.charts.structure) {
@@ -880,20 +933,14 @@
             this.charts.structure = new Chart(ctx, {
                 type: 'polarArea',
                 data: {
-                    labels: labels,
+                    labels: ['Helix (H)', 'Strand (E)', 'Coil (C)', 'Unknown'],
                     datasets: [{
-                        data: Object.values(structure_distribution),
+                        data: [structures.H, structures.E, structures.C, structures.Unknown],
                         backgroundColor: [
                             'rgba(139, 92, 246, 0.8)',
                             'rgba(236, 72, 153, 0.8)',
                             'rgba(6, 182, 212, 0.8)',
                             'rgba(107, 114, 128, 0.8)'
-                        ],
-                        borderColor: [
-                            'rgb(139, 92, 246)',
-                            'rgb(236, 72, 153)',
-                            'rgb(6, 182, 212)',
-                            'rgb(107, 114, 128)'
                         ],
                         borderWidth: 2
                     }]
@@ -904,12 +951,7 @@
                     plugins: {
                         legend: {
                             position: 'bottom',
-                            labels: {
-                                color: '#8b9dc3',
-                                font: { family: 'Inter' },
-                                usePointStyle: true,
-                                padding: 15
-                            }
+                            labels: { color: '#8b9dc3', font: { family: 'Inter' } }
                         }
                     }
                 }
@@ -920,8 +962,22 @@
             const ctx = document.getElementById('kinase-chart')?.getContext('2d');
             if (!ctx) return;
 
-            const { enriched_kinases } = this.analysisData;
-            const topKinases = enriched_kinases.slice(0, 10);
+            // Calculate kinase enrichment from filtered data
+            const kinaseData = {};
+            this.filteredData.all_sites.forEach(site => {
+                if (site.top_kinases) {
+                    site.top_kinases.forEach(k => {
+                        if (!kinaseData[k.kinase]) {
+                            kinaseData[k.kinase] = 0;
+                        }
+                        kinaseData[k.kinase]++;
+                    });
+                }
+            });
+
+            const topKinases = Object.entries(kinaseData)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 10);
 
             if (this.charts.kinase) {
                 this.charts.kinase.destroy();
@@ -930,10 +986,10 @@
             this.charts.kinase = new Chart(ctx, {
                 type: 'bar',
                 data: {
-                    labels: topKinases.map(k => k.kinase),
+                    labels: topKinases.map(k => k[0]),
                     datasets: [{
-                        label: 'Average Score',
-                        data: topKinases.map(k => k.avg_score),
+                        label: 'Site Count',
+                        data: topKinases.map(k => k[1]),
                         backgroundColor: 'rgba(16, 185, 129, 0.8)',
                         borderColor: 'rgb(16, 185, 129)',
                         borderWidth: 2,
@@ -949,7 +1005,7 @@
                     },
                     scales: {
                         x: {
-                            ticks: { color: '#8b9dc3', font: { family: 'JetBrains Mono' } },
+                            ticks: { color: '#8b9dc3' },
                             grid: { color: 'rgba(255, 255, 255, 0.1)' }
                         },
                         y: {
@@ -962,11 +1018,11 @@
         }
 
         renderProteinCards() {
-            const { proteins } = this.analysisData;
+            const { proteins } = this.filteredData;
             const proteinsGrid = document.getElementById('proteins-grid');
 
             proteinsGrid.innerHTML = proteins.map(protein => {
-                const maxPosition = protein.stats.max_position || 1000;
+                const maxPosition = Math.max(...protein.sites.map(s => s.position));
 
                 return `
                     <div class="protein-card">
@@ -974,25 +1030,25 @@
                             <h3 class="protein-name">${protein.gene_symbol}</h3>
                             <div class="protein-stats">
                                 <div class="protein-stat">
-                                    <div class="number">${this.formatNumber(protein.stats.total_sites)}</div>
+                                    <div class="number">${this.formatNumber(protein.sites.length)}</div>
                                     <div>Sites</div>
                                 </div>
                                 <div class="protein-stat">
-                                    <div class="number">${this.formatNumber(protein.stats.significant_sites)}</div>
+                                    <div class="number">${this.formatNumber(protein.sites.filter(s => s.significant_fdr05).length)}</div>
                                     <div>Significant</div>
                                 </div>
                                 <div class="protein-stat">
-                                    <div class="number">${this.formatNumber(protein.stats.high_confidence_sites)}</div>
+                                    <div class="number">${this.formatNumber(protein.sites.filter(s => (s.predicted_prob_calibrated || 0) > 0.8).length)}</div>
                                     <div>High Conf.</div>
                                 </div>
                                 <div class="protein-stat">
-                                    <div class="number">${(protein.stats.avg_confidence * 100).toFixed(0)}%</div>
+                                    <div class="number">${((protein.sites.reduce((sum, s) => sum + (s.predicted_prob_calibrated || 0), 0) / protein.sites.length) * 100).toFixed(0)}%</div>
                                     <div>Avg Conf.</div>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="protein-sequence" id="sequence-${protein.gene_symbol}">
+                        <div class="protein-sequence">
                             <div class="sequence-backbone"></div>
                             ${protein.sites.map((site, index) => {
                                 const leftPercent = 5 + (site.position / maxPosition) * 90;
@@ -1004,19 +1060,11 @@
                                 return `
                                     <div class="phospho-site ${confidenceClass} ${significantClass}"
                                          style="left: ${leftPercent}%"
-                                         onmouseenter="pathwayAnalysis.showSiteTooltip(event, '${protein.gene_symbol}', ${index})"
-                                         onmouseleave="pathwayAnalysis.hideSiteTooltip()"
-                                         onclick="pathwayAnalysis.viewSiteDetail('${site.site_id}')">
+                                         title="${site.gene_symbol} ${site.residue_type}${site.position} - Confidence: ${(confidence * 100).toFixed(1)}% - Top kinases: ${site.top_kinases ? site.top_kinases.map(k => k.kinase).join(', ') : 'N/A'}"
+                                         onclick="this.classList.toggle('selected')">
                                     </div>
                                 `;
                             }).join('')}
-                        </div>
-
-                        <div style="margin-top: 1rem; text-align: center;">
-                            <button class="btn btn-primary btn-sm" onclick="window.open('/protein/${protein.gene_symbol}', '_blank')">
-                                <i class="fas fa-external-link-alt"></i>
-                                View Details
-                            </button>
                         </div>
                     </div>
                 `;
@@ -1024,134 +1072,85 @@
         }
 
         renderSitesTable() {
-            const { proteins } = this.analysisData;
-            const sitesContainer = document.getElementById('sites-table-container');
+            const sites = this.filteredData.all_sites.slice().sort((a, b) => (b.predicted_prob_calibrated || 0) - (a.predicted_prob_calibrated || 0));
 
-            // Flatten all sites from all proteins
-            const allSites = [];
-            proteins.forEach(protein => {
-                protein.sites.forEach(site => {
-                    allSites.push({...site, gene_symbol: protein.gene_symbol});
-                });
-            });
-
-            // Sort by confidence
-            allSites.sort((a, b) => (b.predicted_prob_calibrated || 0) - (a.predicted_prob_calibrated || 0));
-
-            sitesContainer.innerHTML = `
-                <div style="max-height: 600px; overflow-y: auto;">
-                    <table style="width: 100%; border-collapse: collapse;">
-                        <thead style="position: sticky; top: 0; background: var(--secondary-bg);">
-                            <tr style="border-bottom: 1px solid var(--border-color);">
-                                <th style="padding: 0.75rem; text-align: left;">Site</th>
-                                <th style="padding: 0.75rem; text-align: left;">Gene</th>
-                                <th style="padding: 0.75rem; text-align: left;">Position</th>
-                                <th style="padding: 0.75rem; text-align: left;">Confidence</th>
-                                <th style="padding: 0.75rem; text-align: left;">Significant</th>
-                                <th style="padding: 0.75rem; text-align: left;">Structure</th>
-                                <th style="padding: 0.75rem; text-align: left;">Top Kinase</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${allSites.slice(0, 100).map(site => {
-                                const topKinases = this.getTopKinasesForSite(site);
-                                return `
-                                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer;"
-                                        onmouseenter="this.style.background='rgba(255,255,255,0.05)'"
-                                        onmouseleave="this.style.background='transparent'"
-                                        onclick="pathwayAnalysis.viewSiteDetail('${site.site_id}')">
-                                        <td style="padding: 0.75rem;">${site.residue_type}${site.position}</td>
-                                        <td style="padding: 0.75rem; font-family: 'JetBrains Mono', monospace;">${site.gene_symbol}</td>
-                                        <td style="padding: 0.75rem;">${site.position}</td>
-                                        <td style="padding: 0.75rem;">${((site.predicted_prob_calibrated || 0) * 100).toFixed(1)}%</td>
-                                        <td style="padding: 0.75rem;">${site.significant_fdr05 ? 'Yes' : 'No'}</td>
-                                        <td style="padding: 0.75rem;">${site.secondary_structure || 'N/A'}</td>
-                                        <td style="padding: 0.75rem;">
-                                            ${topKinases.length > 0 ? `${topKinases[0].kinase} (${topKinases[0].score.toFixed(3)})` : 'N/A'}
-                                        </td>
-                                    </tr>
-                                `;
-                            }).join('')}
-                        </tbody>
-                    </table>
-                </div>
-            `;
+            const tbody = document.getElementById('sites-table-body');
+            tbody.innerHTML = sites.map(site => `
+                <tr>
+                    <td><code>${site.site_id}</code></td>
+                    <td><strong>${site.gene_symbol}</strong></td>
+                    <td>${site.position}</td>
+                    <td><span style="font-family: monospace;">${site.residue_type}</span></td>
+                    <td>${((site.predicted_prob_calibrated || 0) * 100).toFixed(1)}%</td>
+                    <td>${site.qvalue ? site.qvalue.toExponential(2) : 'N/A'}</td>
+                    <td>${site.secondary_structure || 'N/A'}</td>
+                    <td>
+                        <div class="kinase-scores">
+                            ${site.top_kinases ? site.top_kinases.slice(0, 3).map(k =>
+                                `<div class="kinase-score">${k.kinase}: ${k.score.toFixed(3)}</div>`
+                            ).join('') : 'N/A'}
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
         }
 
         renderKinasesGrid() {
-            const { enriched_kinases } = this.analysisData;
-            const kinasesGrid = document.getElementById('kinases-grid');
+            // Calculate kinase statistics from filtered data
+            const kinaseStats = {};
 
-            kinasesGrid.innerHTML = enriched_kinases.slice(0, 20).map(kinase => `
-                <div class="kinase-item">
-                    <div class="kinase-header">
-                        <div class="kinase-name-main">${kinase.kinase}</div>
-                        <div class="kinase-score-main">${kinase.avg_score}</div>
-                    </div>
-                    <div class="kinase-details">
-                        <div><strong>${kinase.site_count}</strong><br>Sites</div>
-                        <div><strong>${kinase.protein_count}</strong><br>Proteins</div>
-                        <div><strong>${kinase.high_scoring_sites}</strong><br>High Score</div>
-                    </div>
-                </div>
-            `).join('');
-        }
+            this.filteredData.all_sites.forEach(site => {
+                if (site.top_kinases) {
+                    site.top_kinases.forEach(k => {
+                        if (!kinaseStats[k.kinase]) {
+                            kinaseStats[k.kinase] = {
+                                kinase: k.kinase,
+                                site_count: 0,
+                                protein_count: 0,
+                                proteins: new Set(),
+                                avg_score: 0,
+                                max_score: 0,
+                                scores: []
+                            };
+                        }
 
-        showSiteTooltip(event, proteinName, siteIndex) {
-            const tooltip = document.getElementById('site-tooltip');
-            const protein = this.analysisData.proteins.find(p => p.gene_symbol === proteinName);
-            if (!protein || !protein.sites[siteIndex]) return;
-
-            const site = protein.sites[siteIndex];
-            const topKinases = this.getTopKinasesForSite(site).slice(0, 3);
-
-            document.getElementById('tooltip-header').textContent =
-                `${site.gene_symbol} ${site.residue_type}${site.position}`;
-            document.getElementById('tooltip-confidence').textContent =
-                `Confidence: ${((site.predicted_prob_calibrated || 0) * 100).toFixed(1)}% • Q-value: ${site.qvalue ? site.qvalue.toExponential(2) : 'N/A'}`;
-
-            document.getElementById('tooltip-kinases-list').innerHTML = topKinases.map(k => `
-                <div class="kinase-score">
-                    <span class="kinase-name">${k.kinase}</span>
-                    <span class="score-value">${k.score.toFixed(3)}</span>
-                </div>
-            `).join('');
-
-            // Position tooltip
-            tooltip.style.left = `${event.pageX + 10}px`;
-            tooltip.style.top = `${event.pageY - 10}px`;
-            tooltip.classList.add('active');
-        }
-
-        hideSiteTooltip() {
-            document.getElementById('site-tooltip').classList.remove('active');
-        }
-
-        getTopKinasesForSite(site) {
-            const kinases = [];
-            const kinaseColumns = ['AKT1_MotifScore', 'AKT2_MotifScore', 'AKT3_MotifScore', 'CDK1_MotifScore',
-                                 'CDK2_MotifScore', 'CDK4_MotifScore', 'CDK5_MotifScore', 'GSK3A_MotifScore',
-                                 'GSK3B_MotifScore', 'ERK1_MotifScore', 'ERK2_MotifScore', 'JNK1_MotifScore',
-                                 'JNK2_MotifScore', 'JNK3_MotifScore', 'P38A_MotifScore', 'P38B_MotifScore',
-                                 'P38D_MotifScore', 'P38G_MotifScore', 'PKACA_MotifScore', 'PKACB_MotifScore',
-                                 'PKACG_MotifScore', 'ROCK1_MotifScore', 'ROCK2_MotifScore', 'MTOR_MotifScore'];
-
-            kinaseColumns.forEach(col => {
-                const score = site[col];
-                if (score && score > 0) {
-                    kinases.push({
-                        kinase: col.replace('_MotifScore', ''),
-                        score: score
+                        kinaseStats[k.kinase].site_count++;
+                        kinaseStats[k.kinase].proteins.add(site.gene_symbol);
+                        kinaseStats[k.kinase].scores.push(k.score);
                     });
                 }
             });
 
-            return kinases.sort((a, b) => b.score - a.score);
-        }
+            // Calculate final statistics and convert to array
+            const kinases = Object.values(kinaseStats).map(k => {
+                k.protein_count = k.proteins.size;
+                k.avg_score = k.scores.reduce((sum, s) => sum + s, 0) / k.scores.length;
+                k.max_score = Math.max(...k.scores);
+                delete k.proteins; // Remove Set object
+                delete k.scores; // Remove scores array
+                return k;
+            }).sort((a, b) => b.site_count - a.site_count);
 
-        viewSiteDetail(siteId) {
-            // Could open a detailed modal or navigate to site detail page
-            console.log('View site detail:', siteId);
+            const kinasesGrid = document.getElementById('kinases-grid');
+            kinasesGrid.innerHTML = kinases.map(kinase => `
+                <div class="kinase-card">
+                    <div class="kinase-name">${kinase.kinase}</div>
+                    <div class="kinase-stats">
+                        <div class="kinase-stat">
+                            <div class="number">${this.formatNumber(kinase.site_count)}</div>
+                            <div class="label">Sites</div>
+                        </div>
+                        <div class="kinase-stat">
+                            <div class="number">${this.formatNumber(kinase.protein_count)}</div>
+                            <div class="label">Proteins</div>
+                        </div>
+                        <div class="kinase-stat">
+                            <div class="number">${kinase.avg_score.toFixed(3)}</div>
+                            <div class="label">Avg Score</div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
         }
 
         formatNumber(num) {
@@ -1174,6 +1173,8 @@
 
     // View switching functionality
     function switchView(viewName) {
+        pathwayAnalysis.currentView = viewName;
+
         // Update active tab
         document.querySelectorAll('.view-tab').forEach(tab => {
             tab.classList.remove('active');
@@ -1186,27 +1187,47 @@
         });
         document.getElementById(`${viewName}-view`).style.display = 'block';
 
-        // Update description
-        const descriptions = {
-            overview: 'Comprehensive pathway phosphoproteomics analysis with interactive visualizations',
-            proteins: 'Individual protein cards showing phosphorylation site distributions',
-            sites: 'Detailed site-level analysis with sortable table view',
-            kinases: 'Kinase-centric analysis showing enriched kinases and their targets'
+        // Render current view
+        pathwayAnalysis.renderCurrentView();
+    }
+
+    function resetFilters() {
+        document.getElementById('confidence-slider').value = '0.5';
+        document.getElementById('qvalue-slider').value = '0.05';
+        document.getElementById('residue-filter').value = 'all';
+
+        pathwayAnalysis.filters = {
+            confidence: 0.5,
+            qvalue: 0.05,
+            residueType: 'all'
         };
-        document.getElementById('view-description').textContent = descriptions[viewName];
+
+        document.getElementById('confidence-value').textContent = '0.5';
+        document.getElementById('qvalue-value').textContent = '0.05';
+        document.getElementById('residue-count').textContent = 'All';
+
+        pathwayAnalysis.applyFilters();
     }
 
-    // Export functions
-    function downloadReport() {
-        alert('PDF report generation would be implemented here');
-    }
+    function sortTable(columnIndex) {
+        // Table sorting functionality
+        const table = document.getElementById('sites-table');
+        const tbody = table.getElementsByTagName('tbody')[0];
+        const rows = Array.from(tbody.rows);
 
-    function exportData() {
-        alert('Excel export would be implemented here');
-    }
+        const isNumeric = (str) => !isNaN(str) && !isNaN(parseFloat(str));
 
-    function sharePNG() {
-        alert('Figure export would be implemented here');
+        rows.sort((a, b) => {
+            const aValue = a.cells[columnIndex].textContent.trim();
+            const bValue = b.cells[columnIndex].textContent.trim();
+
+            if (isNumeric(aValue) && isNumeric(bValue)) {
+                return parseFloat(bValue) - parseFloat(aValue);
+            }
+            return aValue.localeCompare(bValue);
+        });
+
+        rows.forEach(row => tbody.appendChild(row));
     }
 
     // Initialize analysis when page loads
@@ -1215,7 +1236,7 @@
         const pathwayId = pathParts[2];
 
         if (pathwayId && !isNaN(pathwayId)) {
-            window.pathwayAnalysis = new PathwayAnalysis(parseInt(pathwayId));
+            window.pathwayAnalysis = new AdvancedPathwayAnalysis(parseInt(pathwayId));
         } else {
             document.getElementById('loading-state').innerHTML = `
                 <div style="text-align: center; color: var(--accent-pink);">

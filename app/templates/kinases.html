@@ -1,0 +1,1656 @@
+<!-- app/templates/kinases.html -->
+{% extends "base.html" %}
+
+{% block title %}Kinase Explorer - KinoPlex{% endblock %}
+
+{% block extra_css %}
+<style>
+    .kinase-explorer-layout {
+        display: grid;
+        grid-template-columns: 300px 1fr;
+        gap: 2rem;
+        height: calc(100vh - 120px);
+    }
+
+    .kinase-sidebar {
+        background: var(--glass-bg);
+        border-radius: 16px;
+        border: 1px solid var(--border-color);
+        backdrop-filter: blur(20px);
+        overflow-y: auto;
+        padding: 0;
+    }
+
+    .kinase-main {
+        display: flex;
+        flex-direction: column;
+        gap: 2rem;
+        overflow: hidden;
+    }
+
+    /* Kinase Family Browser */
+    .family-browser {
+        padding: 2rem;
+    }
+
+    .family-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .family-group {
+        margin-bottom: 2rem;
+    }
+
+    .family-header {
+        background: var(--gradient-primary);
+        color: white;
+        padding: 0.75rem 1rem;
+        border-radius: 10px;
+        font-weight: 600;
+        margin-bottom: 0.75rem;
+        cursor: pointer;
+        transition: var(--transition-smooth);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .family-header:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-glow);
+    }
+
+    .family-header.collapsed::after {
+        content: '\f107';
+        font-family: 'Font Awesome 6 Free';
+        font-weight: 900;
+        transition: var(--transition-smooth);
+    }
+
+    .family-header:not(.collapsed)::after {
+        content: '\f106';
+        font-family: 'Font Awesome 6 Free';
+        font-weight: 900;
+        transition: var(--transition-smooth);
+    }
+
+    .kinase-list {
+        display: grid;
+        gap: 0.5rem;
+        padding-left: 1rem;
+        transition: var(--transition-smooth);
+    }
+
+    .kinase-list.collapsed {
+        display: none;
+    }
+
+    .kinase-item {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 0.75rem 1rem;
+        cursor: pointer;
+        transition: var(--transition-smooth);
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.9rem;
+    }
+
+    .kinase-item:hover {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: var(--accent-blue);
+        transform: translateX(4px);
+    }
+
+    .kinase-item.selected {
+        background: rgba(59, 130, 246, 0.2);
+        border-color: var(--accent-blue);
+        color: var(--accent-blue);
+    }
+
+    /* Kinase Detail Panel */
+    .kinase-detail {
+        background: var(--glass-bg);
+        border-radius: 16px;
+        border: 1px solid var(--border-color);
+        backdrop-filter: blur(20px);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .kinase-header {
+        padding: 2rem;
+        border-bottom: 1px solid var(--border-color);
+        background: rgba(255, 255, 255, 0.02);
+    }
+
+    .kinase-name {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        color: var(--text-primary);
+        font-family: 'JetBrains Mono', monospace;
+    }
+
+    .kinase-family-tag {
+        background: var(--gradient-accent);
+        color: white;
+        padding: 0.25rem 1rem;
+        border-radius: 20px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        display: inline-block;
+        margin-bottom: 1rem;
+    }
+
+    .kinase-stats-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+
+    .kinase-stat {
+        background: rgba(255, 255, 255, 0.05);
+        padding: 1rem;
+        border-radius: 10px;
+        text-align: center;
+    }
+
+    .kinase-stat .number {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        font-family: 'JetBrains Mono', monospace;
+    }
+
+    .kinase-stat .label {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-top: 0.25rem;
+    }
+
+    /* Substrate Analysis */
+    .kinase-content {
+        flex: 1;
+        padding: 2rem;
+        overflow-y: auto;
+    }
+
+    .substrate-controls {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+        margin-bottom: 2rem;
+        flex-wrap: wrap;
+    }
+
+    .control-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .control-label {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        white-space: nowrap;
+    }
+
+    .score-slider {
+        width: 150px;
+    }
+
+    .substrate-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+        gap: 1rem;
+    }
+
+    .substrate-card {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border-color);
+        border-radius: 10px;
+        padding: 1.5rem;
+        transition: var(--transition-smooth);
+        cursor: pointer;
+    }
+
+    .substrate-card:hover {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: var(--accent-blue);
+        transform: translateY(-2px);
+    }
+
+    .substrate-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 1rem;
+    }
+
+    .substrate-gene {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        font-family: 'JetBrains Mono', monospace;
+    }
+
+    .substrate-score {
+        background: var(--gradient-primary);
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        font-family: 'JetBrains Mono', monospace;
+    }
+
+    .substrate-details {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.5rem;
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+    }
+
+    .substrate-motif {
+        grid-column: 1 / -1;
+        font-family: 'JetBrains Mono', monospace;
+        background: rgba(255, 255, 255, 0.05);
+        padding: 0.5rem;
+        border-radius: 6px;
+        text-align: center;
+        margin-top: 0.5rem;
+        letter-spacing: 1px;
+    }
+
+    /* Empty State */
+    .empty-state {
+        text-align: center;
+        padding: 4rem;
+        color: var(--text-muted);
+    }
+
+    .empty-state i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+
+    /* Loading State */
+    .loading-substrates {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+        gap: 1rem;
+    }
+
+    .substrate-skeleton {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border-color);
+        border-radius: 10px;
+        padding: 1.5rem;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .kinase-explorer-layout {
+            grid-template-columns: 1fr;
+        }
+
+        .kinase-sidebar {
+            order: 2;
+            height: auto;
+        }
+
+        .substrate-controls {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .score-slider {
+            width: 100%;
+        }
+
+        .substrate-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="kinase-explorer-layout">
+        <!-- Kinase Family Sidebar -->
+        <div class="kinase-sidebar">
+            <div class="family-browser">
+                <h3 class="family-title">
+                    <i class="fas fa-cogs"></i>
+                    Kinase Families
+                </h3>
+
+                <div id="kinase-families">
+                    {% for family, kinases in kinase_families.items() %}
+                    <div class="family-group">
+                        <div class="family-header" onclick="toggleFamily('{{ family }}')">
+                            {{ family }} Family
+                        </div>
+                        <div class="kinase-list" id="family-{{ family }}">
+                            {% for kinase in kinases %}
+                            <div class="kinase-item" onclick="selectKinase('{{ kinase }}')">
+                                {{ kinase }}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Kinase Detail Panel -->
+        <div class="kinase-main">
+            <div class="kinase-detail" id="kinase-detail">
+                <div class="kinase-header" id="kinase-header" style="display: none;">
+                    <h2 class="kinase-name" id="kinase-name">-</h2>
+                    <div class="kinase-family-tag" id="kinase-family-tag">-</div>
+
+                    <div class="kinase-stats-row" id="kinase-stats">
+                        <!-- Stats will be populated here -->
+                    </div>
+                </div>
+
+                <div class="kinase-content" id="kinase-content">
+                    <div class="empty-state">
+                        <i class="fas fa-cogs"></i>
+                        <h3>Select a Kinase</h3>
+                        <p>Choose a kinase from the left panel to explore its predicted substrates and properties.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    class KinaseExplorer {
+        constructor() {
+            this.selectedKinase = null;
+            this.currentSubstrates = [];
+            this.minScore = 0.5;
+            this.maxResults = 50;
+
+            this.init();
+        }
+
+        init() {
+            // Initialize with URL parameters
+            this.checkUrlParams();
+        }
+
+        checkUrlParams() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const kinase = urlParams.get('kinase');
+
+            if (kinase) {
+                this.selectKinase(kinase);
+            }
+        }
+
+        async selectKinase(kinaseName) {
+            this.selectedKinase = kinaseName.toUpperCase();
+
+            // Update UI selection
+            document.querySelectorAll('.kinase-item').forEach(item => {
+                item.classList.remove('selected');
+                if (item.textContent.trim() === this.selectedKinase) {
+                    item.classList.add('selected');
+                }
+            });
+
+            // Show kinase header
+            document.getElementById('kinase-header').style.display = 'block';
+            document.getElementById('kinase-name').textContent = this.selectedKinase;
+
+            // Set family tag
+            const family = this.getKinaseFamily(this.selectedKinase);
+            document.getElementById('kinase-family-tag').textContent = `${family} Family`;
+
+            // Load substrate data
+            await this.loadSubstrates();
+
+            // Update URL
+            const newUrl = new URL(window.location);
+            newUrl.searchParams.set('kinase', this.selectedKinase);
+            window.history.replaceState({}, '', newUrl);
+        }
+
+        async loadSubstrates() {
+            const content = document.getElementById('kinase-content');
+
+            // Show loading state
+            content.innerHTML = `
+                <div class="substrate-controls">
+                    <div class="control-item">
+                        <label class="control-label">Min Score:</label>
+                        <input type="range" class="form-control score-slider" id="score-slider"
+                               min="0" max="1" step="0.1" value="${this.minScore}"
+                               oninput="kinaseExplorer.updateScoreFilter(this.value)">
+                        <span id="score-value">${this.minScore}</span>
+                    </div>
+                    <div class="control-item">
+                        <label class="control-label">Max Results:</label>
+                        <select class="form-select" id="max-results" onchange="kinaseExplorer.updateMaxResults(this.value)">
+                            <option value="25">25</option>
+                            <option value="50" selected>50</option>
+                            <option value="100">100</option>
+                            <option value="200">200</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary" onclick="kinaseExplorer.exportData()">
+                        <i class="fas fa-download"></i> Export
+                    </button>
+                </div>
+
+                <div class="loading-substrates" id="substrate-grid">
+                    ${Array(6).fill(0).map(() => `
+                        <div class="substrate-skeleton">
+                            <div class="skeleton skeleton-text wide"></div>
+                            <div class="skeleton skeleton-text medium"></div>
+                            <div class="skeleton skeleton-text narrow"></div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+
+            try {
+                const data = await KinoAPI.get(`/kinase/${this.selectedKinase}/substrates?min_score=${this.minScore}&limit=${this.maxResults}`);
+
+                if (data && data.substrates) {
+                    this.currentSubstrates = data.substrates;
+                    this.updateStats(data);
+                    this.renderSubstrates();
+                } else {
+                    this.showError('Failed to load substrates');
+                }
+
+            } catch (error) {
+                console.error('Error loading substrates:', error);
+                this.showError('Failed to load substrates');
+            }
+        }
+
+        updateStats(data) {
+            const statsContainer = document.getElementById('kinase-stats');
+
+            const totalPredictions = data.total_predictions;
+            const highConfidence = this.currentSubstrates.filter(s => s.kinase_score > 0.8).length;
+            const significantSites = this.currentSubstrates.filter(s => s.significant_fdr05).length;
+            const avgScore = this.currentSubstrates.length > 0 ?
+                this.currentSubstrates.reduce((sum, s) => sum + s.kinase_score, 0) / this.currentSubstrates.length : 0;
+
+            statsContainer.innerHTML = `
+                <div class="kinase-stat">
+                    <div class="number">${KinoAPI.formatNumber(totalPredictions)}</div>
+                    <div class="label">Predictions</div>
+                </div>
+                <div class="kinase-stat">
+                    <div class="number">${KinoAPI.formatNumber(highConfidence)}</div>
+                    <div class="label">High Score</div>
+                </div>
+                <div class="kinase-stat">
+                    <div class="number">${KinoAPI.formatNumber(significantSites)}</div>
+                    <div class="label">Significant</div>
+                </div>
+                <div class="kinase-stat">
+                    <div class="number">${avgScore.toFixed(3)}</div>
+                    <div class="label">Avg Score</div>
+                </div>
+            `;
+        }
+
+        renderSubstrates() {
+            const substrateGrid = document.getElementById('substrate-grid');
+
+            if (this.currentSubstrates.length === 0) {
+                substrateGrid.innerHTML = `
+                    <div class="empty-state" style="grid-column: 1 / -1;">
+                        <i class="fas fa-search"></i>
+                        <h3>No Substrates Found</h3>
+                        <p>Try lowering the minimum score threshold.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            substrateGrid.className = 'substrate-grid';
+            substrateGrid.innerHTML = this.currentSubstrates.map(substrate => `
+                <div class="substrate-card" onclick="window.location.href='/proteins?protein=${substrate.gene_symbol}'">
+                    <div class="substrate-header">
+                        <div class="substrate-gene">${substrate.gene_symbol}</div>
+                        <div class="substrate-score">${substrate.kinase_score.toFixed(3)}</div>
+                    </div>
+                    <div class="substrate-details">
+                        <div><strong>Position:</strong> ${substrate.residue_type}${substrate.position}</div>
+                        <div><strong>Structure:</strong> ${substrate.secondary_structure || 'N/A'}</div>
+                        <div><strong>pLDDT:</strong> ${substrate.plddt ? substrate.plddt.toFixed(0) : 'N/A'}</div>
+                        <div><strong>Significant:</strong> ${substrate.significant_fdr05 ? 'Yes' : 'No'}</div>
+                    </div>
+                    ${substrate.motif ? `<div class="substrate-motif">${substrate.motif}</div>` : ''}
+                </div>
+            `).join('');
+        }
+
+        updateScoreFilter(value) {
+            this.minScore = parseFloat(value);
+            document.getElementById('score-value').textContent = value;
+            this.loadSubstrates();
+        }
+
+        updateMaxResults(value) {
+            this.maxResults = parseInt(value);
+            this.loadSubstrates();
+        }
+
+        showError(message) {
+            const content = document.getElementById('kinase-content');
+            content.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-exclamation-triangle" style="color: var(--accent-pink);"></i>
+                    <h3>Error</h3>
+                    <p>${message}</p>
+                    <button class="btn btn-primary" onclick="kinaseExplorer.loadSubstrates()" style="margin-top: 1rem;">
+                        <i class="fas fa-redo"></i> Retry
+                    </button>
+                </div>
+            `;
+        }
+
+        exportData() {
+            if (!this.currentSubstrates.length) return;
+
+            const csvData = [
+                ['Gene Symbol', 'Position', 'Residue', 'Kinase Score', 'Confidence', 'Significant', 'Structure', 'pLDDT', 'Motif'],
+                ...this.currentSubstrates.map(s => [
+                    s.gene_symbol,
+                    s.position,
+                    s.residue_type,
+                    s.kinase_score,
+                    s.predicted_prob_calibrated || '',
+                    s.significant_fdr05 ? 'Yes' : 'No',
+                    s.secondary_structure || '',
+                    s.plddt || '',
+                    s.motif || ''
+                ])
+            ];
+
+            const csvContent = csvData.map(row => row.join(',')).join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${this.selectedKinase}_substrates.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        }
+
+        getKinaseFamily(kinaseName) {
+            const families = {
+                'AGC': ['AKT1', 'AKT2', 'AKT3', 'PKA', 'PKACA', 'PKACB', 'PKACG', 'PKG1', 'PKG2', 'PKN1', 'PKN2', 'PKN3', 'ROCK1', 'ROCK2', 'P70S6K', 'P70S6KB', 'RSK2', 'RSK3', 'RSK4', 'P90RSK', 'SGK1', 'SGK3'],
+                'CAMK': ['CAMK1A', 'CAMK1B', 'CAMK1D', 'CAMK1G', 'CAMK2A', 'CAMK2B', 'CAMK2D', 'CAMK2G', 'CAMK4', 'CAMKK1', 'CAMKK2', 'CAMLCK', 'DAPK1', 'DAPK2', 'DAPK3', 'DCAMKL1', 'DCAMKL2', 'MARK1', 'MARK2', 'MARK3', 'MARK4'],
+                'CK1': ['CK1A', 'CK1A2', 'CK1D', 'CK1E', 'CK1G1', 'CK1G2', 'CK1G3'],
+                'CMGC': ['CDK1', 'CDK2', 'CDK3', 'CDK4', 'CDK5', 'CDK6', 'CDK7', 'CDK8', 'CDK9', 'CDK10', 'CDK12', 'CDK13', 'CDK14', 'CDK16', 'CDK17', 'CDK18', 'CDK19', 'CDKL1', 'CDKL5', 'CLK1', 'CLK2', 'CLK3', 'CLK4', 'DYRK1A', 'DYRK1B', 'DYRK2', 'DYRK3', 'DYRK4', 'ERK1', 'ERK2', 'ERK5', 'ERK7', 'GSK3A', 'GSK3B', 'JNK1', 'JNK2', 'JNK3', 'MAPKAPK2', 'MAPKAPK3', 'MAPKAPK5', 'P38A', 'P38B', 'P38D', 'P38G'],
+                'STE': ['MEK1', 'MEK2', 'MEK5', 'MEKK1', 'MEKK2', 'MEKK3', 'MEKK6', 'PAK1', 'PAK2', 'PAK3', 'PAK4', 'PAK5', 'PAK6', 'ASK1', 'TAK1', 'TAO1', 'TAO2', 'TAO3'],
+                'TK': ['ALK2', 'ALK4'],
+                'TKL': ['ACVR2A', 'ACVR2B', 'BMPR1A', 'BMPR1B', 'BMPR2', 'TGFBR1', 'TGFBR2', 'BRAF', 'RAF1', 'MLK1', 'MLK2', 'MLK3', 'MLK4', 'LRRK2', 'RIPK1', 'RIPK2', 'RIPK3']
+            };
+
+            for (const [family, kinases] of Object.entries(families)) {
+                if (kinases.includes(kinaseName)) {
+                    return family;
+                }
+            }
+            return 'Other';
+        }
+    }
+
+    // Global functions for template onclick handlers
+    function toggleFamily(family) {
+        const familyList = document.getElementById(`family-${family}`);
+        const header = familyList.previousElementSibling;
+
+        familyList.classList.toggle('collapsed');
+        header.classList.toggle('collapsed');
+    }
+
+    function selectKinase(kinaseName) {
+        if (window.kinaseExplorer) {
+            window.kinaseExplorer.selectKinase(kinaseName);
+        }
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+        window.kinaseExplorer = new KinaseExplorer();
+    });
+</script>
+{% endblock %}
+
+<!-- app/templates/discover.html -->
+{% extends "base.html" %}
+
+{% block title %}Discovery Lab - KinoPlex{% endblock %}
+
+{% block extra_css %}
+<style>
+    .discovery-layout {
+        display: grid;
+        grid-template-columns: 350px 1fr;
+        gap: 2rem;
+        height: calc(100vh - 120px);
+    }
+
+    .analysis-sidebar {
+        background: var(--glass-bg);
+        border-radius: 16px;
+        border: 1px solid var(--border-color);
+        backdrop-filter: blur(20px);
+        overflow-y: auto;
+    }
+
+    .analysis-main {
+        background: var(--glass-bg);
+        border-radius: 16px;
+        border: 1px solid var(--border-color);
+        backdrop-filter: blur(20px);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* Analysis Tools */
+    .analysis-tools {
+        padding: 2rem;
+    }
+
+    .tools-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .tool-category {
+        margin-bottom: 2rem;
+    }
+
+    .category-header {
+        font-weight: 600;
+        color: var(--text-secondary);
+        margin-bottom: 1rem;
+        font-size: 0.875rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .tool-item {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border-color);
+        border-radius: 10px;
+        padding: 1rem;
+        margin-bottom: 0.75rem;
+        cursor: pointer;
+        transition: var(--transition-smooth);
+    }
+
+    .tool-item:hover {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: var(--accent-blue);
+        transform: translateX(4px);
+    }
+
+    .tool-item.active {
+        background: rgba(59, 130, 246, 0.2);
+        border-color: var(--accent-blue);
+    }
+
+    .tool-name {
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 0.25rem;
+        font-size: 0.9rem;
+    }
+
+    .tool-description {
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+        line-height: 1.4;
+    }
+
+    /* Analysis Interface */
+    .analysis-header {
+        padding: 2rem 2rem 1rem;
+        border-bottom: 1px solid var(--border-color);
+        background: rgba(255, 255, 255, 0.02);
+    }
+
+    .analysis-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        color: var(--text-primary);
+    }
+
+    .analysis-subtitle {
+        color: var(--text-secondary);
+        margin-bottom: 1rem;
+    }
+
+    .analysis-content {
+        flex: 1;
+        padding: 2rem;
+        overflow-y: auto;
+    }
+
+    /* Gene Input Interface */
+    .gene-input-section {
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .input-methods {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+    }
+
+    .input-method {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .method-label {
+        font-weight: 600;
+        margin-bottom: 0.75rem;
+        color: var(--text-primary);
+    }
+
+    .gene-textarea {
+        min-height: 120px;
+        resize: vertical;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.9rem;
+    }
+
+    .file-upload {
+        border: 2px dashed var(--border-color);
+        border-radius: 10px;
+        padding: 2rem;
+        text-align: center;
+        transition: var(--transition-smooth);
+        cursor: pointer;
+    }
+
+    .file-upload:hover {
+        border-color: var(--accent-blue);
+        background: rgba(59, 130, 246, 0.05);
+    }
+
+    .file-upload.dragover {
+        border-color: var(--accent-blue);
+        background: rgba(59, 130, 246, 0.1);
+    }
+
+    .upload-icon {
+        font-size: 2rem;
+        color: var(--text-muted);
+        margin-bottom: 1rem;
+    }
+
+    .upload-text {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+    }
+
+    /* Analysis Parameters */
+    .parameters-section {
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .parameters-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+    }
+
+    .parameter-group {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .parameter-label {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+    }
+
+    /* Results Display */
+    .results-section {
+        margin-top: 2rem;
+    }
+
+    .results-tabs {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .result-tab {
+        padding: 0.75rem 1.5rem;
+        background: none;
+        border: none;
+        color: var(--text-secondary);
+        cursor: pointer;
+        transition: var(--transition-smooth);
+        font-weight: 500;
+        border-bottom: 2px solid transparent;
+    }
+
+    .result-tab:hover {
+        color: var(--text-primary);
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    .result-tab.active {
+        color: var(--accent-blue);
+        border-bottom-color: var(--accent-blue);
+    }
+
+    .result-content {
+        min-height: 300px;
+    }
+
+    /* Comparison Matrix */
+    .comparison-matrix {
+        overflow-x: auto;
+        margin: 1rem 0;
+    }
+
+    .matrix-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-family: 'JetBrains Mono', monospace;
+    }
+
+    .matrix-table th,
+    .matrix-table td {
+        padding: 0.75rem;
+        text-align: center;
+        border: 1px solid var(--border-color);
+    }
+
+    .matrix-table th {
+        background: rgba(255, 255, 255, 0.05);
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+
+    .similarity-cell {
+        background: rgba(59, 130, 246, var(--opacity));
+        color: white;
+        font-weight: 600;
+    }
+
+    /* Pathway Enrichment */
+    .pathway-item {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 0.75rem;
+        transition: var(--transition-smooth);
+        cursor: pointer;
+    }
+
+    .pathway-item:hover {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: var(--accent-blue);
+    }
+
+    .pathway-name {
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 0.25rem;
+    }
+
+    .pathway-collection {
+        background: var(--gradient-accent);
+        color: white;
+        padding: 0.2rem 0.6rem;
+        border-radius: 12px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        display: inline-block;
+        margin-bottom: 0.5rem;
+    }
+
+    .pathway-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+    }
+
+    .pathway-stat {
+        text-align: center;
+        padding: 0.25rem;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 4px;
+        font-size: 0.8rem;
+    }
+
+    .stat-value {
+        font-weight: 700;
+        color: var(--text-primary);
+        font-family: 'JetBrains Mono', monospace;
+    }
+
+    .stat-label {
+        color: var(--text-secondary);
+        font-size: 0.7rem;
+    }
+
+    /* Loading and Empty States */
+    .analysis-loading {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 4rem;
+        color: var(--text-secondary);
+    }
+
+    .loading-spinner-large {
+        width: 40px;
+        height: 40px;
+        border: 3px solid rgba(255, 255, 255, 0.3);
+        border-radius: 50%;
+        border-top-color: var(--accent-blue);
+        animation: spin 1s ease-in-out infinite;
+        margin-bottom: 1rem;
+    }
+
+    .analysis-empty {
+        text-align: center;
+        padding: 4rem;
+        color: var(--text-muted);
+    }
+
+    .analysis-empty i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+
+    /* Action Buttons */
+    .action-buttons {
+        display: flex;
+        gap: 1rem;
+        margin-top: 2rem;
+        flex-wrap: wrap;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .discovery-layout {
+            grid-template-columns: 1fr;
+        }
+
+        .analysis-sidebar {
+            order: 2;
+            height: auto;
+        }
+
+        .input-methods {
+            grid-template-columns: 1fr;
+        }
+
+        .parameters-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .action-buttons {
+            flex-direction: column;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="discovery-layout">
+        <!-- Analysis Tools Sidebar -->
+        <div class="analysis-sidebar">
+            <div class="analysis-tools">
+                <h3 class="tools-title">
+                    <i class="fas fa-flask"></i>
+                    Analysis Tools
+                </h3>
+
+                <div class="tool-category">
+                    <div class="category-header">Comparative Analysis</div>
+
+                    <div class="tool-item active" onclick="selectTool('protein-comparison')">
+                        <div class="tool-name">Protein Comparison</div>
+                        <div class="tool-description">Compare multiple proteins side-by-side</div>
+                    </div>
+
+                    <div class="tool-item" onclick="selectTool('pathway-enrichment')">
+                        <div class="tool-name">Pathway Enrichment</div>
+                        <div class="tool-description">Find enriched pathways in gene sets</div>
+                    </div>
+                </div>
+
+                <div class="tool-category">
+                    <div class="category-header">Structural Analysis</div>
+
+                    <div class="tool-item" onclick="selectTool('structural-features')">
+                        <div class="tool-name">Structural Features</div>
+                        <div class="tool-description">Analyze structural patterns in sites</div>
+                    </div>
+
+                    <div class="tool-item" onclick="selectTool('disorder-analysis')">
+                        <div class="tool-name">Disorder Analysis</div>
+                        <div class="tool-description">Study intrinsic disorder patterns</div>
+                    </div>
+                </div>
+
+                <div class="tool-category">
+                    <div class="category-header">Kinase Analysis</div>
+
+                    <div class="tool-item" onclick="selectTool('kinase-similarity')">
+                        <div class="tool-name">Kinase Similarity</div>
+                        <div class="tool-description">Compare kinase substrate profiles</div>
+                    </div>
+
+                    <div class="tool-item" onclick="selectTool('motif-analysis')">
+                        <div class="tool-name">Motif Analysis</div>
+                        <div class="tool-description">Analyze sequence motif patterns</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Analysis Interface -->
+        <div class="analysis-main">
+            <div class="analysis-header">
+                <h2 class="analysis-title" id="analysis-title">Protein Comparison</h2>
+                <p class="analysis-subtitle" id="analysis-subtitle">
+                    Compare phosphorylation profiles across multiple proteins
+                </p>
+            </div>
+
+            <div class="analysis-content" id="analysis-content">
+                <!-- Content will be dynamically loaded -->
+                <div id="protein-comparison-interface">
+                    <!-- Default interface: Protein Comparison -->
+                    <div class="gene-input-section">
+                        <h3 style="margin-bottom: 1rem; color: var(--text-primary);">Input Gene List</h3>
+                        <div class="input-methods">
+                            <div class="input-method">
+                                <label class="method-label">Enter Genes (one per line)</label>
+                                <textarea class="form-control gene-textarea" id="gene-input"
+                                         placeholder="TP53&#10;AKT1&#10;BRCA1&#10;CDK2&#10;GSK3B"></textarea>
+                            </div>
+                            <div class="input-method">
+                                <label class="method-label">Upload Gene List</label>
+                                <div class="file-upload" id="file-upload">
+                                    <i class="fas fa-cloud-upload-alt upload-icon"></i>
+                                    <div class="upload-text">
+                                        Drag and drop a text file or click to browse
+                                        <br>
+                                        <small>(Supported: .txt, .csv)</small>
+                                    </div>
+                                    <input type="file" id="file-input" accept=".txt,.csv" style="display: none;">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="parameters-section">
+                        <h3 style="margin-bottom: 1rem; color: var(--text-primary);">Analysis Parameters</h3>
+                        <div class="parameters-grid">
+                            <div class="parameter-group">
+                                <label class="parameter-label">Confidence Threshold</label>
+                                <input type="range" class="form-control" id="confidence-threshold"
+                                       min="0" max="1" step="0.1" value="0.5">
+                                <span id="confidence-value">0.5</span>
+                            </div>
+                            <div class="parameter-group">
+                                <label class="parameter-label">Include Only Significant</label>
+                                <select class="form-select" id="significant-only">
+                                    <option value="false">All Sites</option>
+                                    <option value="true">Significant Only</option>
+                                </select>
+                            </div>
+                            <div class="parameter-group">
+                                <label class="parameter-label">Analysis Type</label>
+                                <select class="form-select" id="analysis-type">
+                                    <option value="full">Full Analysis</option>
+                                    <option value="kinases">Kinases Only</option>
+                                    <option value="pathways">Pathways Only</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="action-buttons">
+                        <button class="btn btn-primary" id="run-analysis">
+                            <i class="fas fa-play"></i>
+                            Run Analysis
+                        </button>
+                        <button class="btn btn-secondary" id="clear-input">
+                            <i class="fas fa-trash"></i>
+                            Clear
+                        </button>
+                        <button class="btn btn-secondary" id="load-example">
+                            <i class="fas fa-magic"></i>
+                            Load Example
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Results Section -->
+                <div class="results-section" id="results-section" style="display: none;">
+                    <!-- Results will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    class DiscoveryLab {
+        constructor() {
+            this.currentTool = 'protein-comparison';
+            this.analysisResults = null;
+
+            this.init();
+        }
+
+        init() {
+            this.setupEventListeners();
+            this.setupFileUpload();
+        }
+
+        setupEventListeners() {
+            // Parameter controls
+            document.getElementById('confidence-threshold').addEventListener('input', (e) => {
+                document.getElementById('confidence-value').textContent = e.target.value;
+            });
+
+            // Action buttons
+            document.getElementById('run-analysis').addEventListener('click', () => {
+                this.runAnalysis();
+            });
+
+            document.getElementById('clear-input').addEventListener('click', () => {
+                this.clearInput();
+            });
+
+            document.getElementById('load-example').addEventListener('click', () => {
+                this.loadExample();
+            });
+        }
+
+        setupFileUpload() {
+            const fileUpload = document.getElementById('file-upload');
+            const fileInput = document.getElementById('file-input');
+
+            fileUpload.addEventListener('click', () => fileInput.click());
+
+            fileInput.addEventListener('change', (e) => {
+                this.handleFileUpload(e.target.files[0]);
+            });
+
+            // Drag and drop
+            fileUpload.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                fileUpload.classList.add('dragover');
+            });
+
+            fileUpload.addEventListener('dragleave', () => {
+                fileUpload.classList.remove('dragover');
+            });
+
+            fileUpload.addEventListener('drop', (e) => {
+                e.preventDefault();
+                fileUpload.classList.remove('dragover');
+                this.handleFileUpload(e.dataTransfer.files[0]);
+            });
+        }
+
+        handleFileUpload(file) {
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const content = e.target.result;
+                const genes = content.split(/\r?\n/).filter(line => line.trim());
+                document.getElementById('gene-input').value = genes.join('\n');
+            };
+            reader.readAsText(file);
+        }
+
+        selectTool(toolName) {
+            this.currentTool = toolName;
+
+            // Update active tool
+            document.querySelectorAll('.tool-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.target.closest('.tool-item').classList.add('active');
+
+            // Update interface
+            this.updateInterface(toolName);
+        }
+
+        updateInterface(toolName) {
+            const titles = {
+                'protein-comparison': 'Protein Comparison',
+                'pathway-enrichment': 'Pathway Enrichment',
+                'structural-features': 'Structural Features Analysis',
+                'disorder-analysis': 'Disorder Analysis',
+                'kinase-similarity': 'Kinase Similarity',
+                'motif-analysis': 'Motif Analysis'
+            };
+
+            const subtitles = {
+                'protein-comparison': 'Compare phosphorylation profiles across multiple proteins',
+                'pathway-enrichment': 'Identify enriched pathways in your gene set',
+                'structural-features': 'Analyze structural patterns in phosphorylation sites',
+                'disorder-analysis': 'Study intrinsic disorder in phosphoproteins',
+                'kinase-similarity': 'Compare substrate specificity profiles',
+                'motif-analysis': 'Analyze sequence motif conservation'
+            };
+
+            document.getElementById('analysis-title').textContent = titles[toolName];
+            document.getElementById('analysis-subtitle').textContent = subtitles[toolName];
+
+            // Hide results when switching tools
+            document.getElementById('results-section').style.display = 'none';
+        }
+
+        async runAnalysis() {
+            const genes = this.getGeneList();
+            if (genes.length === 0) {
+                alert('Please enter at least one gene symbol');
+                return;
+            }
+
+            const params = this.getAnalysisParameters();
+
+            // Show loading state
+            this.showLoading();
+
+            try {
+                let results;
+
+                switch (this.currentTool) {
+                    case 'protein-comparison':
+                        results = await this.runProteinComparison(genes, params);
+                        break;
+                    case 'pathway-enrichment':
+                        results = await this.runPathwayEnrichment(genes, params);
+                        break;
+                    case 'structural-features':
+                        results = await this.runStructuralAnalysis(genes, params);
+                        break;
+                    default:
+                        throw new Error('Analysis not implemented yet');
+                }
+
+                this.analysisResults = results;
+                this.displayResults(results);
+
+            } catch (error) {
+                console.error('Analysis error:', error);
+                this.showError('Analysis failed: ' + error.message);
+            }
+        }
+
+        getGeneList() {
+            const input = document.getElementById('gene-input').value;
+            return input.split(/\r?\n/)
+                       .map(gene => gene.trim().toUpperCase())
+                       .filter(gene => gene.length > 0);
+        }
+
+        getAnalysisParameters() {
+            return {
+                confidence_threshold: parseFloat(document.getElementById('confidence-threshold').value),
+                significant_only: document.getElementById('significant-only').value === 'true',
+                analysis_type: document.getElementById('analysis-type').value
+            };
+        }
+
+        async runProteinComparison(genes, params) {
+            const response = await fetch('/api/v1/analysis/compare-proteins', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ genes, ...params })
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to run protein comparison');
+            }
+
+            return await response.json();
+        }
+
+        async runPathwayEnrichment(genes, params) {
+            const response = await fetch('/api/v1/analysis/pathway-enrichment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ genes, min_overlap: 2, max_pathways: 50 })
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to run pathway enrichment');
+            }
+
+            return await response.json();
+        }
+
+        async runStructuralAnalysis(genes, params) {
+            const response = await fetch('/api/v1/analysis/structural-features', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ genes, confidence_threshold: params.confidence_threshold })
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to run structural analysis');
+            }
+
+            return await response.json();
+        }
+
+        showLoading() {
+            const resultsSection = document.getElementById('results-section');
+            resultsSection.style.display = 'block';
+            resultsSection.innerHTML = `
+                <div class="analysis-loading">
+                    <div class="loading-spinner-large"></div>
+                    <h3>Running Analysis...</h3>
+                    <p>This may take a few moments for large gene sets</p>
+                </div>
+            `;
+        }
+
+        showError(message) {
+            const resultsSection = document.getElementById('results-section');
+            resultsSection.style.display = 'block';
+            resultsSection.innerHTML = `
+                <div class="analysis-empty">
+                    <i class="fas fa-exclamation-triangle" style="color: var(--accent-pink);"></i>
+                    <h3>Analysis Error</h3>
+                    <p>${message}</p>
+                    <button class="btn btn-primary" onclick="discoveryLab.runAnalysis()" style="margin-top: 1rem;">
+                        <i class="fas fa-redo"></i> Retry
+                    </button>
+                </div>
+            `;
+        }
+
+        displayResults(results) {
+            const resultsSection = document.getElementById('results-section');
+            resultsSection.style.display = 'block';
+
+            switch (this.currentTool) {
+                case 'protein-comparison':
+                    this.displayProteinComparison(results);
+                    break;
+                case 'pathway-enrichment':
+                    this.displayPathwayEnrichment(results);
+                    break;
+                case 'structural-features':
+                    this.displayStructuralAnalysis(results);
+                    break;
+            }
+        }
+
+        displayProteinComparison(results) {
+            const { comparison, common_pathways, similarity_matrix } = results;
+
+            const resultsHTML = `
+                <div class="results-tabs">
+                    <button class="result-tab active" onclick="showResultTab('comparison')">Comparison</button>
+                    <button class="result-tab" onclick="showResultTab('similarity')">Similarity</button>
+                    <button class="result-tab" onclick="showResultTab('pathways')">Common Pathways</button>
+                </div>
+
+                <div class="result-content" id="comparison-tab">
+                    <div style="overflow-x: auto;">
+                        <table class="matrix-table">
+                            <thead>
+                                <tr>
+                                    <th>Protein</th>
+                                    <th>Total Sites</th>
+                                    <th>Significant</th>
+                                    <th>High Confidence</th>
+                                    <th>Avg Confidence</th>
+                                    <th>Pathways</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${Object.entries(comparison).map(([gene, data]) => `
+                                    <tr>
+                                        <td><strong>${gene}</strong></td>
+                                        <td>${KinoAPI.formatNumber(data.total_sites || 0)}</td>
+                                        <td>${KinoAPI.formatNumber(data.significant_sites || 0)}</td>
+                                        <td>${KinoAPI.formatNumber(data.high_confidence_sites || 0)}</td>
+                                        <td>${(data.avg_confidence || 0).toFixed(3)}</td>
+                                        <td>${KinoAPI.formatNumber(data.pathway_count || 0)}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="result-content" id="similarity-tab" style="display: none;">
+                    <h3>Protein Similarity Matrix</h3>
+                    <div class="comparison-matrix">
+                        <table class="matrix-table">
+                            <thead>
+                                <tr>
+                                    <th></th>
+                                    ${Object.keys(comparison).map(gene => `<th>${gene}</th>`).join('')}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${Object.entries(similarity_matrix).map(([gene1, similarities]) => `
+                                    <tr>
+                                        <th>${gene1}</th>
+                                        ${Object.entries(similarities).map(([gene2, similarity]) => `
+                                            <td class="similarity-cell" style="--opacity: ${similarity}">
+                                                ${similarity.toFixed(3)}
+                                            </td>
+                                        `).join('')}
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="result-content" id="pathways-tab" style="display: none;">
+                    <h3>Common Pathways (${common_pathways.length})</h3>
+                    ${common_pathways.map(pathway => `
+                        <div class="pathway-item">
+                            <div class="pathway-collection">${pathway.gs_collection}</div>
+                            <div class="pathway-name">${pathway.gs_name}</div>
+                            <p style="color: var(--text-secondary); margin: 0.5rem 0;">
+                                ${pathway.gs_description || 'No description available'}
+                            </p>
+                            <div class="pathway-stats">
+                                <div class="pathway-stat">
+                                    <div class="stat-value">${pathway.gene_overlap}</div>
+                                    <div class="stat-label">Overlap</div>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+
+            document.getElementById('results-section').innerHTML = resultsHTML;
+        }
+
+        displayPathwayEnrichment(results) {
+            const { enriched_pathways } = results;
+
+            const resultsHTML = `
+                <h3>Enriched Pathways (${enriched_pathways.length})</h3>
+                ${enriched_pathways.map(pathway => `
+                    <div class="pathway-item">
+                        <div class="pathway-collection">${pathway.gs_collection}</div>
+                        <div class="pathway-name">${pathway.gs_name}</div>
+                        <p style="color: var(--text-secondary); margin: 0.5rem 0;">
+                            ${pathway.gs_description || 'No description available'}
+                        </p>
+                        <div class="pathway-stats">
+                            <div class="pathway-stat">
+                                <div class="stat-value">${pathway.overlap_count}</div>
+                                <div class="stat-label">Overlap</div>
+                            </div>
+                            <div class="pathway-stat">
+                                <div class="stat-value">${pathway.total_genes}</div>
+                                <div class="stat-label">Total</div>
+                            </div>
+                            <div class="pathway-stat">
+                                <div class="stat-value">${pathway.enrichment_score.toFixed(2)}</div>
+                                <div class="stat-label">Enrichment</div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('')}
+            `;
+
+            document.getElementById('results-section').innerHTML = resultsHTML;
+        }
+
+        displayStructuralAnalysis(results) {
+            const { structure_analysis, disorder_stats, sasa_stats, total_sites } = results;
+
+            const resultsHTML = `
+                <h3>Structural Analysis (${KinoAPI.formatNumber(total_sites)} sites)</h3>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin: 2rem 0;">
+                    <div>
+                        <h4>Secondary Structure Distribution</h4>
+                        <table class="matrix-table">
+                            <thead>
+                                <tr><th>Structure</th><th>Count</th><th>%</th><th>Avg Conf.</th></tr>
+                            </thead>
+                            <tbody>
+                                ${Object.entries(structure_analysis).map(([struct, data]) => `
+                                    <tr>
+                                        <td><strong>${struct}</strong></td>
+                                        <td>${KinoAPI.formatNumber(data.count)}</td>
+                                        <td>${data.percentage}%</td>
+                                        <td>${data.avg_confidence.toFixed(3)}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div>
+                        <h4>Feature Statistics</h4>
+                        <div class="pathway-stats">
+                            <div class="pathway-stat">
+                                <div class="stat-value">${disorder_stats.mean.toFixed(3)}</div>
+                                <div class="stat-label">Avg Disorder</div>
+                            </div>
+                            <div class="pathway-stat">
+                                <div class="stat-value">${sasa_stats.mean.toFixed(3)}</div>
+                                <div class="stat-label">Avg SASA</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('results-section').innerHTML = resultsHTML;
+        }
+
+        clearInput() {
+            document.getElementById('gene-input').value = '';
+            document.getElementById('results-section').style.display = 'none';
+        }
+
+        loadExample() {
+            const exampleGenes = ['TP53', 'AKT1', 'BRCA1', 'CDK2', 'GSK3B', 'ERK1', 'JNK1', 'P38A'];
+            document.getElementById('gene-input').value = exampleGenes.join('\n');
+        }
+    }
+
+    // Global functions
+    function selectTool(toolName) {
+        if (window.discoveryLab) {
+            window.discoveryLab.selectTool(toolName);
+        }
+    }
+
+    function showResultTab(tabName) {
+        // Hide all tabs
+        document.querySelectorAll('.result-content').forEach(tab => {
+            tab.style.display = 'none';
+        });
+
+        // Remove active class from all tab buttons
+        document.querySelectorAll('.result-tab').forEach(btn => {
+            btn.classList.remove('active');
+        });
+
+        // Show selected tab
+        document.getElementById(tabName + '-tab').style.display = 'block';
+        event.target.classList.add('active');
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+        window.discoveryLab = new DiscoveryLab();
+    });
+</script>
+{% endblock %}

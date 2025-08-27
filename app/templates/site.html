@@ -1,0 +1,1307 @@
+{% extends "base.html" %}
+
+{% block title %}Protein Explorer - KinoPlex{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Protein Viewer Layout */
+    .protein-layout {
+        display: grid;
+        grid-template-columns: 350px 1fr;
+        gap: 2rem;
+        height: calc(100vh - 120px);
+    }
+
+    .protein-sidebar {
+        background: var(--glass-bg);
+        border-radius: 16px;
+        border: 1px solid var(--border-color);
+        backdrop-filter: blur(20px);
+        overflow-y: auto;
+        padding: 0;
+    }
+
+    .protein-main {
+        display: flex;
+        flex-direction: column;
+        gap: 2rem;
+        overflow: hidden;
+    }
+
+    /* Search Section */
+    .protein-search {
+        background: var(--glass-bg);
+        border-radius: 16px;
+        padding: 2rem;
+        border: 1px solid var(--border-color);
+        backdrop-filter: blur(20px);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .protein-search::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 2px;
+        background: var(--gradient-primary);
+    }
+
+    .search-input-group {
+        position: relative;
+        margin-bottom: 1.5rem;
+    }
+
+    .search-suggestions {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: var(--secondary-bg);
+        border: 1px solid var(--border-color);
+        border-top: none;
+        border-radius: 0 0 10px 10px;
+        max-height: 200px;
+        overflow-y: auto;
+        z-index: 100;
+        display: none;
+    }
+
+    .suggestion-item {
+        padding: 0.75rem 1rem;
+        cursor: pointer;
+        transition: var(--transition-smooth);
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .suggestion-item:hover {
+        background: rgba(255, 255, 255, 0.1);
+    }
+
+    .suggestion-item:last-child {
+        border-bottom: none;
+    }
+
+    .suggestion-name {
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+
+    .suggestion-stats {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+    }
+
+    /* Protein Info Panel */
+    .protein-info {
+        padding: 2rem;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .protein-name {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        color: var(--text-primary);
+    }
+
+    .protein-ids {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .protein-id {
+        background: rgba(59, 130, 246, 0.2);
+        color: var(--accent-blue);
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-family: 'JetBrains Mono', monospace;
+    }
+
+    .protein-stats-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+        margin: 1.5rem 0;
+    }
+
+    .stat-box {
+        background: rgba(255, 255, 255, 0.05);
+        padding: 1rem;
+        border-radius: 10px;
+        text-align: center;
+        transition: var(--transition-smooth);
+    }
+
+    .stat-box:hover {
+        background: rgba(255, 255, 255, 0.1);
+        transform: translateY(-2px);
+    }
+
+    .stat-box .number {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        font-family: 'JetBrains Mono', monospace;
+    }
+
+    .stat-box .label {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-top: 0.25rem;
+    }
+
+    /* Site Filters */
+    .site-filters {
+        padding: 2rem;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .filter-title {
+        font-weight: 600;
+        margin-bottom: 1rem;
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .filter-group {
+        margin-bottom: 1rem;
+    }
+
+    .filter-checkbox {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.5rem 0;
+        cursor: pointer;
+        transition: var(--transition-smooth);
+    }
+
+    .filter-checkbox:hover {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 8px;
+        padding: 0.5rem 0.75rem;
+        margin: 0 -0.75rem;
+    }
+
+    .filter-checkbox input {
+        appearance: none;
+        width: 16px;
+        height: 16px;
+        border: 2px solid var(--border-color);
+        border-radius: 4px;
+        transition: var(--transition-smooth);
+        position: relative;
+    }
+
+    .filter-checkbox input:checked {
+        background: var(--accent-blue);
+        border-color: var(--accent-blue);
+    }
+
+    .filter-checkbox input:checked::after {
+        content: '\2713';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: white;
+        font-size: 10px;
+        font-weight: bold;
+    }
+
+    .filter-slider {
+        margin: 1rem 0;
+    }
+
+    .slider-input {
+        width: 100%;
+        margin: 0.5rem 0;
+    }
+
+    .slider-values {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+    }
+
+    /* Sites List */
+    .sites-list {
+        padding: 2rem;
+        flex: 1;
+        overflow-y: auto;
+    }
+
+    .site-item {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border-color);
+        border-radius: 10px;
+        padding: 1rem;
+        margin-bottom: 0.75rem;
+        cursor: pointer;
+        transition: var(--transition-smooth);
+        position: relative;
+    }
+
+    .site-item:hover {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: var(--accent-blue);
+        transform: translateX(4px);
+    }
+
+    .site-item.selected {
+        border-color: var(--accent-blue);
+        background: rgba(59, 130, 246, 0.1);
+    }
+
+    .site-header {
+        display: flex;
+        justify-content: between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+    }
+
+    .site-position {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: var(--text-primary);
+        font-family: 'JetBrains Mono', monospace;
+    }
+
+    .site-confidence {
+        background: var(--gradient-accent);
+        color: white;
+        padding: 0.25rem 0.5rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        margin-left: auto;
+    }
+
+    .site-confidence.high { background: var(--gradient-primary); }
+    .site-confidence.medium { background: var(--gradient-warm); }
+    .site-confidence.low { background: rgba(239, 68, 68, 0.8); }
+
+    .site-motif {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+        margin-bottom: 0.5rem;
+        letter-spacing: 1px;
+    }
+
+    .site-structure {
+        display: flex;
+        gap: 1rem;
+        font-size: 0.75rem;
+        color: var(--text-muted);
+    }
+
+    /* Visualization Area */
+    .viz-container {
+        background: var(--glass-bg);
+        border-radius: 16px;
+        border: 1px solid var(--border-color);
+        backdrop-filter: blur(20px);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .viz-header {
+        padding: 1.5rem 2rem;
+        border-bottom: 1px solid var(--border-color);
+        background: rgba(255, 255, 255, 0.02);
+    }
+
+    .viz-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        color: var(--text-primary);
+    }
+
+    .viz-controls {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+    }
+
+    .control-group {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .control-label {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+    }
+
+    .toggle-btn {
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid var(--border-color);
+        color: var(--text-secondary);
+        padding: 0.4rem 0.8rem;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        cursor: pointer;
+        transition: var(--transition-smooth);
+    }
+
+    .toggle-btn.active {
+        background: var(--accent-blue);
+        color: white;
+        border-color: var(--accent-blue);
+    }
+
+    .viz-content {
+        flex: 1;
+        padding: 2rem;
+        position: relative;
+    }
+
+    /* Protein Linear View */
+    .protein-linear {
+        width: 100%;
+        height: 200px;
+        position: relative;
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: 10px;
+        margin: 1rem 0;
+        overflow: hidden;
+    }
+
+    .protein-backbone {
+        position: absolute;
+        top: 50%;
+        left: 5%;
+        right: 5%;
+        height: 8px;
+        background: var(--gradient-secondary);
+        border-radius: 4px;
+        transform: translateY(-50%);
+    }
+
+    .phospho-site {
+        position: absolute;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        top: 50%;
+        transform: translateY(-50%);
+        cursor: pointer;
+        transition: var(--transition-smooth);
+        border: 2px solid white;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    .phospho-site:hover {
+        transform: translateY(-50%) scale(1.5);
+        z-index: 10;
+    }
+
+    .phospho-site.high-confidence { background: var(--accent-green); }
+    .phospho-site.medium-confidence { background: var(--accent-orange); }
+    .phospho-site.low-confidence { background: var(--accent-pink); }
+    .phospho-site.selected {
+        border-color: var(--accent-blue);
+        box-shadow: 0 0 15px rgba(59, 130, 246, 0.8);
+    }
+
+    /* Charts */
+    .charts-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+        margin-top: 2rem;
+    }
+
+    .chart-container {
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: 10px;
+        padding: 1.5rem;
+    }
+
+    .chart-title {
+        font-weight: 600;
+        margin-bottom: 1rem;
+        text-align: center;
+        color: var(--text-primary);
+    }
+
+    /* Site Detail Panel */
+    .site-detail {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) scale(0.9);
+        width: 90%;
+        max-width: 800px;
+        max-height: 80vh;
+        background: var(--secondary-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        backdrop-filter: blur(20px);
+        z-index: 3000;
+        opacity: 0;
+        visibility: hidden;
+        transition: var(--transition-smooth);
+        overflow-y: auto;
+    }
+
+    .site-detail.active {
+        opacity: 1;
+        visibility: visible;
+        transform: translate(-50%, -50%) scale(1);
+    }
+
+    .site-detail-header {
+        padding: 2rem;
+        border-bottom: 1px solid var(--border-color);
+        position: relative;
+    }
+
+    .site-detail-close {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        background: none;
+        border: none;
+        color: var(--text-secondary);
+        font-size: 1.5rem;
+        cursor: pointer;
+        padding: 0.5rem;
+        border-radius: 8px;
+        transition: var(--transition-smooth);
+    }
+
+    .site-detail-close:hover {
+        color: var(--text-primary);
+        background: rgba(255, 255, 255, 0.1);
+    }
+
+    .site-detail-content {
+        padding: 2rem;
+    }
+
+    .detail-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+    }
+
+    .detail-section {
+        margin-bottom: 2rem;
+    }
+
+    .detail-section h3 {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        color: var(--text-primary);
+        border-bottom: 1px solid var(--border-color);
+        padding-bottom: 0.5rem;
+    }
+
+    .kinase-scores {
+        max-height: 300px;
+        overflow-y: auto;
+    }
+
+    .kinase-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .kinase-name {
+        font-weight: 500;
+        color: var(--text-primary);
+        font-family: 'JetBrains Mono', monospace;
+    }
+
+    .kinase-score {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .score-bar {
+        width: 100px;
+        height: 6px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 3px;
+        overflow: hidden;
+    }
+
+    .score-fill {
+        height: 100%;
+        background: var(--gradient-primary);
+        border-radius: 3px;
+        transition: width 0.3s ease;
+    }
+
+    .score-value {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 1200px) {
+        .protein-layout {
+            grid-template-columns: 300px 1fr;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .protein-layout {
+            grid-template-columns: 1fr;
+            height: auto;
+        }
+
+        .protein-sidebar {
+            order: 2;
+            height: auto;
+        }
+
+        .protein-main {
+            order: 1;
+        }
+
+        .charts-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .detail-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .viz-controls {
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .protein-stats-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="protein-layout">
+        <!-- Sidebar -->
+        <div class="protein-sidebar">
+            <!-- Search Section -->
+            <div class="protein-search">
+                <h3 style="margin-bottom: 1rem; color: var(--text-primary);">
+                    <i class="fas fa-search"></i>
+                    Protein Search
+                </h3>
+
+                <div class="search-input-group">
+                    <div class="search-box">
+                        <input type="text" class="form-control" id="protein-search-input"
+                               placeholder="Enter gene symbol (e.g., TP53, AKT1)">
+                    </div>
+                    <div class="search-suggestions" id="search-suggestions">
+                        <!-- Suggestions will be populated here -->
+                    </div>
+                </div>
+
+                <button class="btn btn-primary" id="search-protein-btn" style="width: 100%;">
+                    <i class="fas fa-dna"></i>
+                    Load Protein
+                </button>
+            </div>
+
+            <!-- Protein Info -->
+            <div class="protein-info" id="protein-info" style="display: none;">
+                <h2 class="protein-name" id="protein-name">-</h2>
+
+                <div class="protein-ids" id="protein-ids">
+                    <!-- IDs will be populated here -->
+                </div>
+
+                <div class="protein-stats-grid" id="protein-stats">
+                    <!-- Stats will be populated here -->
+                </div>
+            </div>
+
+            <!-- Site Filters -->
+            <div class="site-filters" id="site-filters" style="display: none;">
+                <div class="filter-title">
+                    <i class="fas fa-filter"></i>
+                    Filter Sites
+                </div>
+
+                <div class="filter-group">
+                    <div class="filter-checkbox">
+                        <input type="checkbox" id="show-significant" checked>
+                        <label for="show-significant">Significant sites only</label>
+                    </div>
+                    <div class="filter-checkbox">
+                        <input type="checkbox" id="show-high-confidence" checked>
+                        <label for="show-high-confidence">High confidence (>0.7)</label>
+                    </div>
+                </div>
+
+                <div class="filter-group">
+                    <label class="filter-label">Confidence Threshold</label>
+                    <div class="filter-slider">
+                        <input type="range" class="slider-input" id="confidence-slider"
+                               min="0" max="1" step="0.1" value="0.5">
+                        <div class="slider-values">
+                            <span>0.0</span>
+                            <span id="confidence-value">0.5</span>
+                            <span>1.0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sites List -->
+            <div class="sites-list" id="sites-list">
+                <div style="text-align: center; color: var(--text-muted); padding: 2rem;">
+                    <i class="fas fa-dna" style="font-size: 2rem; margin-bottom: 1rem; opacity: 0.5;"></i>
+                    <p>Search for a protein to view phosphorylation sites</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Visualization -->
+        <div class="protein-main">
+            <!-- Visualization Container -->
+            <div class="viz-container" id="viz-container">
+                <div class="viz-header">
+                    <h2 class="viz-title" id="viz-title">Protein Visualization</h2>
+                    <div class="viz-controls">
+                        <div class="control-group">
+                            <span class="control-label">View:</span>
+                            <button class="toggle-btn active" id="linear-view">Linear</button>
+                            <button class="toggle-btn" id="structure-view">Structure</button>
+                        </div>
+                        <div class="control-group">
+                            <span class="control-label">Show:</span>
+                            <button class="toggle-btn active" id="show-confidence">Confidence</button>
+                            <button class="toggle-btn" id="show-kinases">Kinases</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="viz-content" id="viz-content">
+                    <div style="text-align: center; color: var(--text-muted); padding: 4rem;">
+                        <i class="fas fa-atom" style="font-size: 4rem; margin-bottom: 1rem; opacity: 0.3;"></i>
+                        <h3 style="margin-bottom: 1rem;">Protein Visualization</h3>
+                        <p>Select a protein from the search to view its phosphorylation landscape</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts -->
+            <div class="charts-grid" id="charts-container" style="display: none;">
+                <div class="chart-container">
+                    <h3 class="chart-title">Confidence Distribution</h3>
+                    <canvas id="confidence-chart" width="400" height="200"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h3 class="chart-title">Secondary Structure</h3>
+                    <canvas id="structure-chart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Site Detail Modal -->
+<div class="site-detail" id="site-detail">
+    <div class="site-detail-header">
+        <button class="site-detail-close" id="site-detail-close">
+            <i class="fas fa-times"></i>
+        </button>
+        <h2 id="detail-site-title">Site Details</h2>
+        <div id="detail-site-subtitle" style="color: var(--text-secondary);"></div>
+    </div>
+
+    <div class="site-detail-content">
+        <div class="detail-grid">
+            <div class="detail-section">
+                <h3>Site Information</h3>
+                <div id="detail-site-info">
+                    <!-- Site info will be populated here -->
+                </div>
+            </div>
+
+            <div class="detail-section">
+                <h3>Structural Context</h3>
+                <div id="detail-structural-info">
+                    <!-- Structural info will be populated here -->
+                </div>
+            </div>
+        </div>
+
+        <div class="detail-section">
+            <h3>Top Kinase Predictions</h3>
+            <div class="kinase-scores" id="detail-kinase-scores">
+                <!-- Kinase scores will be populated here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Overlay -->
+<div class="overlay" id="overlay-detail" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); z-index: 2999; opacity: 0; visibility: hidden; transition: all 0.3s ease;"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    class ProteinExplorer {
+        constructor() {
+            this.currentProtein = null;
+            this.allSites = [];
+            this.filteredSites = [];
+            this.selectedSite = null;
+            this.charts = {};
+
+            this.init();
+        }
+
+        init() {
+            this.setupEventListeners();
+            this.checkUrlParams();
+        }
+
+        setupEventListeners() {
+            // Search functionality
+            const searchInput = document.getElementById('protein-search-input');
+            const searchBtn = document.getElementById('search-protein-btn');
+
+            searchInput.addEventListener('input', this.debounce(() => {
+                this.showSuggestions(searchInput.value);
+            }, 300));
+
+            searchInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    this.searchProtein();
+                }
+            });
+
+            searchBtn.addEventListener('click', () => this.searchProtein());
+
+            // Site filters
+            ['show-significant', 'show-high-confidence'].forEach(id => {
+                document.getElementById(id).addEventListener('change', () => {
+                    this.filterSites();
+                });
+            });
+
+            const confidenceSlider = document.getElementById('confidence-slider');
+            confidenceSlider.addEventListener('input', () => {
+                document.getElementById('confidence-value').textContent = confidenceSlider.value;
+                this.filterSites();
+            });
+
+            // View controls
+            document.getElementById('linear-view').addEventListener('click', () => {
+                this.setActiveView('linear');
+            });
+
+            document.getElementById('structure-view').addEventListener('click', () => {
+                this.setActiveView('structure');
+            });
+
+            // Site detail modal
+            document.getElementById('site-detail-close').addEventListener('click', () => {
+                this.closeSiteDetail();
+            });
+
+            document.getElementById('overlay-detail').addEventListener('click', () => {
+                this.closeSiteDetail();
+            });
+        }
+
+        checkUrlParams() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const protein = urlParams.get('protein');
+
+            if (protein) {
+                document.getElementById('protein-search-input').value = protein;
+                this.searchProtein();
+            }
+        }
+
+        debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        async showSuggestions(query) {
+            const suggestionsContainer = document.getElementById('search-suggestions');
+
+            if (!query || query.length < 1) {
+                suggestionsContainer.style.display = 'none';
+                return;
+            }
+
+            const data = await KinoAPI.get(`/search/proteins?q=${encodeURIComponent(query)}&limit=8`);
+
+            if (data && data.proteins && data.proteins.length > 0) {
+                suggestionsContainer.innerHTML = data.proteins.map(protein => `
+                    <div class="suggestion-item" onclick="proteinExplorer.selectProtein('${protein.gene_symbol}')">
+                        <div class="suggestion-name">${protein.gene_symbol}</div>
+                        <div class="suggestion-stats">
+                            ${KinoAPI.formatNumber(protein.site_count)} sites •
+                            ${KinoAPI.formatNumber(protein.significant_sites)} significant
+                        </div>
+                    </div>
+                `).join('');
+                suggestionsContainer.style.display = 'block';
+            } else {
+                suggestionsContainer.style.display = 'none';
+            }
+        }
+
+        selectProtein(geneSymbol) {
+            document.getElementById('protein-search-input').value = geneSymbol;
+            document.getElementById('search-suggestions').style.display = 'none';
+            this.searchProtein();
+        }
+
+        async searchProtein() {
+            const query = document.getElementById('protein-search-input').value.trim().toUpperCase();
+
+            if (!query) {
+                return;
+            }
+
+            // Show loading state
+            this.showLoading();
+
+            const data = await KinoAPI.get(`/protein/${encodeURIComponent(query)}`);
+
+            if (data && data.protein) {
+                this.currentProtein = data;
+                this.allSites = data.sites || [];
+                this.updateProteinInfo();
+                this.filterSites();
+                this.createVisualization();
+                this.createCharts();
+
+                // Update URL
+                const newUrl = new URL(window.location);
+                newUrl.searchParams.set('protein', query);
+                window.history.replaceState({}, '', newUrl);
+            } else {
+                this.showError('Protein not found');
+            }
+        }
+
+        showLoading() {
+            const sitesList = document.getElementById('sites-list');
+            sitesList.innerHTML = '<div class="flex-center" style="padding: 2rem;"><div class="loading-spinner"></div></div>';
+        }
+
+        showError(message) {
+            const sitesList = document.getElementById('sites-list');
+            sitesList.innerHTML = `
+                <div style="text-align: center; color: var(--accent-pink); padding: 2rem;">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 2rem; margin-bottom: 1rem;"></i>
+                    <p>${message}</p>
+                </div>
+            `;
+        }
+
+        updateProteinInfo() {
+            const { protein, stats } = this.currentProtein;
+
+            // Show protein info section
+            document.getElementById('protein-info').style.display = 'block';
+            document.getElementById('site-filters').style.display = 'block';
+
+            // Update protein name
+            document.getElementById('protein-name').textContent = protein.gene_symbol;
+
+            // Update IDs
+            const idsContainer = document.getElementById('protein-ids');
+            idsContainer.innerHTML = `
+                ${protein.ncbi_gene_id ? `<div class="protein-id">NCBI: ${protein.ncbi_gene_id}</div>` : ''}
+                ${protein.ensembl_gene_id ? `<div class="protein-id">Ensembl: ${protein.ensembl_gene_id}</div>` : ''}
+            `;
+
+            // Update stats
+            const statsContainer = document.getElementById('protein-stats');
+            statsContainer.innerHTML = `
+                <div class="stat-box">
+                    <div class="number">${KinoAPI.formatNumber(stats.total_sites)}</div>
+                    <div class="label">Total Sites</div>
+                </div>
+                <div class="stat-box">
+                    <div class="number">${KinoAPI.formatNumber(stats.significant_sites)}</div>
+                    <div class="label">Significant</div>
+                </div>
+                <div class="stat-box">
+                    <div class="number">${KinoAPI.formatNumber(stats.high_confidence)}</div>
+                    <div class="label">High Conf.</div>
+                </div>
+                <div class="stat-box">
+                    <div class="number">${KinoAPI.formatNumber(stats.pathway_count)}</div>
+                    <div class="label">Pathways</div>
+                </div>
+            `;
+        }
+
+        filterSites() {
+            if (!this.allSites.length) return;
+
+            const showSignificant = document.getElementById('show-significant').checked;
+            const showHighConfidence = document.getElementById('show-high-confidence').checked;
+            const confidenceThreshold = parseFloat(document.getElementById('confidence-slider').value);
+
+            this.filteredSites = this.allSites.filter(site => {
+                if (showSignificant && !site.significant_fdr05) return false;
+                if (showHighConfidence && (site.predicted_prob_calibrated || 0) <= 0.7) return false;
+                if ((site.predicted_prob_calibrated || 0) < confidenceThreshold) return false;
+                return true;
+            });
+
+            this.updateSitesList();
+            this.updateVisualization();
+        }
+
+        updateSitesList() {
+            const sitesList = document.getElementById('sites-list');
+
+            if (this.filteredSites.length === 0) {
+                sitesList.innerHTML = `
+                    <div style="text-align: center; color: var(--text-muted); padding: 2rem;">
+                        <i class="fas fa-filter" style="font-size: 2rem; margin-bottom: 1rem; opacity: 0.5;"></i>
+                        <p>No sites match the current filters</p>
+                    </div>
+                `;
+                return;
+            }
+
+            sitesList.innerHTML = this.filteredSites.map((site, index) => {
+                const confidence = site.predicted_prob_calibrated || 0;
+                const confidenceClass = confidence > 0.8 ? 'high' : confidence > 0.5 ? 'medium' : 'low';
+                const confidenceText = confidence > 0.8 ? 'High' : confidence > 0.5 ? 'Medium' : 'Low';
+
+                return `
+                    <div class="site-item" onclick="proteinExplorer.selectSite(${index})">
+                        <div class="site-header">
+                            <div class="site-position">${site.residue_type}${site.position}</div>
+                            <div class="site-confidence ${confidenceClass}">${confidenceText}</div>
+                        </div>
+                        <div class="site-motif">${site.motif || 'N/A'}</div>
+                        <div class="site-structure">
+                            <span>${site.secondary_structure || 'N/A'}</span>
+                            <span>pLDDT: ${site.plddt ? site.plddt.toFixed(0) : 'N/A'}</span>
+                            <span>Q-val: ${site.qvalue ? site.qvalue.toExponential(2) : 'N/A'}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        selectSite(index) {
+            // Update selected state
+            document.querySelectorAll('.site-item').forEach((item, i) => {
+                if (i === index) {
+                    item.classList.add('selected');
+                } else {
+                    item.classList.remove('selected');
+                }
+            });
+
+            this.selectedSite = this.filteredSites[index];
+            this.updateVisualization();
+        }
+
+        createVisualization() {
+            const vizContent = document.getElementById('viz-content');
+            document.getElementById('viz-title').textContent = `${this.currentProtein.protein.gene_symbol} Phosphorylation Sites`;
+
+            // Create linear protein view
+            vizContent.innerHTML = `
+                <div class="protein-linear" id="protein-linear">
+                    <div class="protein-backbone"></div>
+                </div>
+                <div style="display: flex; justify-content: center; gap: 2rem; margin-top: 1rem; font-size: 0.875rem; color: var(--text-secondary);">
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <div style="width: 12px; height: 12px; border-radius: 50%; background: var(--accent-green);"></div>
+                        High Confidence
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <div style="width: 12px; height: 12px; border-radius: 50%; background: var(--accent-orange);"></div>
+                        Medium Confidence
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <div style="width: 12px; height: 12px; border-radius: 50%; background: var(--accent-pink);"></div>
+                        Low Confidence
+                    </div>
+                </div>
+            `;
+
+            this.updateVisualization();
+            document.getElementById('charts-container').style.display = 'grid';
+        }
+
+        updateVisualization() {
+            if (!this.filteredSites.length) return;
+
+            const proteinLinear = document.getElementById('protein-linear');
+            if (!proteinLinear) return;
+
+            // Clear existing sites
+            proteinLinear.querySelectorAll('.phospho-site').forEach(site => site.remove());
+
+            // Find protein length (max position)
+            const maxPosition = Math.max(...this.allSites.map(site => site.position));
+
+            // Add phosphorylation sites
+            this.filteredSites.forEach((site, index) => {
+                const siteElement = document.createElement('div');
+                siteElement.className = 'phospho-site';
+
+                const confidence = site.predicted_prob_calibrated || 0;
+                const confidenceClass = confidence > 0.8 ? 'high-confidence' :
+                                      confidence > 0.5 ? 'medium-confidence' : 'low-confidence';
+
+                siteElement.classList.add(confidenceClass);
+
+                if (this.selectedSite && this.selectedSite.site_id === site.site_id) {
+                    siteElement.classList.add('selected');
+                }
+
+                // Position the site
+                const leftPercent = 5 + (site.position / maxPosition) * 90;
+                siteElement.style.left = `${leftPercent}%`;
+
+                // Add click handler
+                siteElement.onclick = () => {
+                    this.selectSite(index);
+                    this.showSiteDetail(site);
+                };
+
+                // Add tooltip
+                siteElement.title = `${site.residue_type}${site.position} - Confidence: ${(confidence * 100).toFixed(1)}%`;
+
+                proteinLinear.appendChild(siteElement);
+            });
+        }
+
+        createCharts() {
+            this.createConfidenceChart();
+            this.createStructureChart();
+        }
+
+        createConfidenceChart() {
+            const ctx = document.getElementById('confidence-chart').getContext('2d');
+
+            // Destroy existing chart
+            if (this.charts.confidence) {
+                this.charts.confidence.destroy();
+            }
+
+            // Prepare data
+            const bins = [0, 0, 0, 0]; // <0.3, 0.3-0.5, 0.5-0.8, >0.8
+
+            this.allSites.forEach(site => {
+                const conf = site.predicted_prob_calibrated || 0;
+                if (conf < 0.3) bins[0]++;
+                else if (conf < 0.5) bins[1]++;
+                else if (conf < 0.8) bins[2]++;
+                else bins[3]++;
+            });
+
+            this.charts.confidence = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['<0.3', '0.3-0.5', '0.5-0.8', '>0.8'],
+                    datasets: [{
+                        label: 'Site Count',
+                        data: bins,
+                        backgroundColor: [
+                            'rgba(239, 68, 68, 0.8)',
+                            'rgba(245, 158, 11, 0.8)',
+                            'rgba(59, 130, 246, 0.8)',
+                            'rgba(16, 185, 129, 0.8)'
+                        ],
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: '#8b9dc3' },
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                        },
+                        y: {
+                            ticks: { color: '#8b9dc3' },
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                        }
+                    }
+                }
+            });
+        }
+
+        createStructureChart() {
+            const ctx = document.getElementById('structure-chart').getContext('2d');
+
+            // Destroy existing chart
+            if (this.charts.structure) {
+                this.charts.structure.destroy();
+            }
+
+            // Count sites by secondary structure
+            const structures = { 'H': 0, 'E': 0, 'C': 0, 'Unknown': 0 };
+
+            this.allSites.forEach(site => {
+                const struct = site.secondary_structure || 'Unknown';
+                structures[struct] = (structures[struct] || 0) + 1;
+            });
+
+            this.charts.structure = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Helix (H)', 'Strand (E)', 'Coil (C)', 'Unknown'],
+                    datasets: [{
+                        data: [structures.H, structures.E, structures.C, structures.Unknown],
+                        backgroundColor: [
+                            'rgba(139, 92, 246, 0.8)',
+                            'rgba(236, 72, 153, 0.8)',
+                            'rgba(6, 182, 212, 0.8)',
+                            'rgba(107, 114, 128, 0.8)'
+                        ],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                color: '#8b9dc3',
+                                font: { family: 'Inter' }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        async showSiteDetail(site) {
+            // Get detailed site analysis
+            const data = await KinoAPI.get(`/site/${site.site_id}/analysis`);
+
+            if (!data) return;
+
+            // Update modal content
+            document.getElementById('detail-site-title').textContent =
+                `${site.gene_symbol} ${site.residue_type}${site.position}`;
+
+            document.getElementById('detail-site-subtitle').textContent =
+                `Confidence: ${((site.predicted_prob_calibrated || 0) * 100).toFixed(1)}% • Q-value: ${site.qvalue ? site.qvalue.toExponential(2) : 'N/A'}`;
+
+            // Site information
+            document.getElementById('detail-site-info').innerHTML = `
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div><strong>Position:</strong> ${site.position}</div>
+                    <div><strong>Residue:</strong> ${site.residue_type}</div>
+                    <div><strong>Motif:</strong> ${site.motif || 'N/A'}</div>
+                    <div><strong>Significant:</strong> ${site.significant_fdr05 ? 'Yes' : 'No'}</div>
+                </div>
+            `;
+
+            // Structural information
+            const structInfo = data.structural_features || {};
+            document.getElementById('detail-structural-info').innerHTML = `
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div><strong>Structure:</strong> ${structInfo.secondary_structure || 'N/A'}</div>
+                    <div><strong>pLDDT:</strong> ${structInfo.plddt ? structInfo.plddt.toFixed(0) : 'N/A'}</div>
+                    <div><strong>Disorder:</strong> ${structInfo.disorder_score ? structInfo.disorder_score.toFixed(2) : 'N/A'}</div>
+                    <div><strong>SASA Ratio:</strong> ${structInfo.sasa_ratio ? structInfo.sasa_ratio.toFixed(2) : 'N/A'}</div>
+                    <div><strong>Neighbors:</strong> ${structInfo.neighbor_count || 'N/A'}</div>
+                    <div><strong>H-bonds:</strong> ${structInfo.hydrogen_bonds || 'N/A'}</div>
+                </div>
+            `;
+
+            // Top kinase predictions
+            const topKinases = (data.kinase_scores || []).slice(0, 10);
+            document.getElementById('detail-kinase-scores').innerHTML = topKinases.map(kinase => `
+                <div class="kinase-item">
+                    <div class="kinase-name">${kinase.kinase}</div>
+                    <div class="kinase-score">
+                        <div class="score-bar">
+                            <div class="score-fill" style="width: ${kinase.score * 100}%"></div>
+                        </div>
+                        <div class="score-value">${kinase.score.toFixed(3)}</div>
+                    </div>
+                </div>
+            `).join('');
+
+            // Show modal
+            document.getElementById('site-detail').classList.add('active');
+            document.getElementById('overlay-detail').style.opacity = '1';
+            document.getElementById('overlay-detail').style.visibility = 'visible';
+            document.body.style.overflow = 'hidden';
+        }
+
+        closeSiteDetail() {
+            document.getElementById('site-detail').classList.remove('active');
+            document.getElementById('overlay-detail').style.opacity = '0';
+            document.getElementById('overlay-detail').style.visibility = 'hidden';
+            document.body.style.overflow = 'auto';
+        }
+
+        setActiveView(view) {
+            document.querySelectorAll('.toggle-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            if (view === 'linear') {
+                document.getElementById('linear-view').classList.add('active');
+                // Linear view is already implemented
+            } else if (view === 'structure') {
+                document.getElementById('structure-view').classList.add('active');
+                // TODO: Implement 3D structure view
+            }
+        }
+    }
+
+    // Initialize protein explorer
+    let proteinExplorer;
+    document.addEventListener('DOMContentLoaded', () => {
+        proteinExplorer = new ProteinExplorer();
+    });
+</script>
+{% endblock %}

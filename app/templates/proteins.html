@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block title %}Protein Explorer - KinoPlex{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="glass-card">
+        <h1>
+            <i class="fas fa-dna"></i>
+            Protein Explorer
+        </h1>
+        <p style="color: var(--text-secondary); margin-bottom: 2rem;">
+            Explore phosphorylation sites across human proteins with detailed structural and functional context.
+        </p>
+
+        <!-- Search Section -->
+        <div class="mb-4">
+            <div class="search-box">
+                <input type="text" class="form-control" id="protein-search"
+                       placeholder="Enter protein name or gene symbol (e.g., TP53, AKT1, BRCA1)">
+            </div>
+            <button class="btn btn-primary mt-2" onclick="searchProtein()">
+                <i class="fas fa-search"></i>
+                Search Protein
+            </button>
+        </div>
+
+        <!-- Results Section -->
+        <div id="results-section" style="display: none;">
+            <h2>Search Results</h2>
+            <div id="protein-results">
+                <!-- Results will be populated here -->
+            </div>
+        </div>
+
+        <!-- Featured Proteins -->
+        <div class="mt-4">
+            <h3>Featured Proteins</h3>
+            <div class="grid-3">
+                <div class="glass-card" onclick="loadProtein('TP53')">
+                    <h4>TP53</h4>
+                    <p>Tumor protein p53 - Guardian of the genome</p>
+                </div>
+                <div class="glass-card" onclick="loadProtein('AKT1')">
+                    <h4>AKT1</h4>
+                    <p>RAC-alpha serine/threonine-protein kinase</p>
+                </div>
+                <div class="glass-card" onclick="loadProtein('BRCA1')">
+                    <h4>BRCA1</h4>
+                    <p>Breast cancer 1, early onset</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function searchProtein() {
+        const query = document.getElementById('protein-search').value.trim();
+        if (query) {
+            loadProtein(query);
+        }
+    }
+
+    function loadProtein(proteinName) {
+        window.location.href = `/proteins?protein=${proteinName}`;
+    }
+
+    // Allow Enter key to trigger search
+    document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('protein-search').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                searchProtein();
+            }
+        });
+    });
+</script>
+{% endblock %}

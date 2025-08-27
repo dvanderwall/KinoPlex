@@ -1,0 +1,712 @@
+{% extends "base.html" %}
+
+{% block title %}KinoPlex - Next-Generation Phosphoproteomics Platform{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Hero Section */
+    .hero-section {
+        padding: 4rem 0 2rem;
+        text-align: center;
+        position: relative;
+    }
+
+    .hero-title {
+        font-size: clamp(2.5rem, 5vw, 4rem);
+        font-weight: 700;
+        margin-bottom: 1.5rem;
+        background: var(--gradient-primary);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .hero-subtitle {
+        font-size: 1.25rem;
+        color: var(--text-secondary);
+        margin-bottom: 3rem;
+        max-width: 600px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .hero-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 2rem;
+        margin-bottom: 3rem;
+    }
+
+    .stat-card {
+        background: var(--glass-bg);
+        padding: 2rem;
+        border-radius: 16px;
+        border: 1px solid var(--border-color);
+        backdrop-filter: blur(20px);
+        transition: var(--transition-smooth);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 2px;
+        background: var(--gradient-primary);
+    }
+
+    .stat-card:hover {
+        transform: translateY(-8px);
+        box-shadow: var(--shadow-glow);
+    }
+
+    .stat-value {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 0.5rem;
+        font-family: 'JetBrains Mono', monospace;
+    }
+
+    .stat-label {
+        color: var(--text-secondary);
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-size: 0.875rem;
+    }
+
+    /* Features Grid */
+    .features-section {
+        margin: 4rem 0;
+    }
+
+    .section-title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        text-align: center;
+        margin-bottom: 3rem;
+        color: var(--text-primary);
+    }
+
+    .features-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        gap: 2rem;
+        margin-top: 2rem;
+    }
+
+    .feature-card {
+        background: var(--glass-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 20px;
+        padding: 2.5rem;
+        backdrop-filter: blur(20px);
+        transition: var(--transition-smooth);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .feature-card::after {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -50%;
+        width: 100%;
+        height: 100%;
+        background: radial-gradient(circle, rgba(59, 130, 246, 0.1), transparent);
+        opacity: 0;
+        transition: var(--transition-smooth);
+    }
+
+    .feature-card:hover::after {
+        opacity: 1;
+        transform: scale(1.2);
+    }
+
+    .feature-card:hover {
+        transform: translateY(-10px) scale(1.02);
+        border-color: rgba(59, 130, 246, 0.3);
+    }
+
+    .feature-icon {
+        width: 60px;
+        height: 60px;
+        background: var(--gradient-accent);
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: var(--shadow-glow);
+    }
+
+    .feature-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        color: var(--text-primary);
+    }
+
+    .feature-description {
+        color: var(--text-secondary);
+        line-height: 1.6;
+        margin-bottom: 1.5rem;
+    }
+
+    .feature-stats {
+        display: flex;
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+
+    .mini-stat {
+        padding: 0.5rem 1rem;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 20px;
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+    }
+
+    .mini-stat strong {
+        color: var(--text-primary);
+    }
+
+    /* Interactive Demo Section */
+    .demo-section {
+        margin: 4rem 0;
+        text-align: center;
+    }
+
+    .demo-container {
+        background: var(--glass-bg);
+        border-radius: 20px;
+        padding: 3rem;
+        border: 1px solid var(--border-color);
+        backdrop-filter: blur(20px);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .demo-container::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background:
+            radial-gradient(600px circle at 30% 20%, rgba(139, 92, 246, 0.1), transparent),
+            radial-gradient(400px circle at 70% 80%, rgba(236, 72, 153, 0.1), transparent);
+        pointer-events: none;
+    }
+
+    .quick-search {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+        margin-top: 2rem;
+        position: relative;
+        z-index: 10;
+    }
+
+    .search-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 2rem;
+        transition: var(--transition-smooth);
+    }
+
+    .search-card:hover {
+        background: rgba(255, 255, 255, 0.05);
+        transform: translateY(-4px);
+    }
+
+    .search-card h3 {
+        margin-bottom: 1rem;
+        color: var(--text-primary);
+    }
+
+    .search-results {
+        margin-top: 1rem;
+        max-height: 200px;
+        overflow-y: auto;
+    }
+
+    .search-result {
+        padding: 0.75rem;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 8px;
+        margin-bottom: 0.5rem;
+        cursor: pointer;
+        transition: var(--transition-smooth);
+        text-align: left;
+    }
+
+    .search-result:hover {
+        background: rgba(255, 255, 255, 0.1);
+        transform: translateX(4px);
+    }
+
+    /* Chart Containers */
+    .charts-section {
+        margin: 4rem 0;
+    }
+
+    .charts-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+        margin-top: 2rem;
+    }
+
+    .chart-card {
+        background: var(--glass-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 2rem;
+        backdrop-filter: blur(20px);
+    }
+
+    .chart-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+        text-align: center;
+        color: var(--text-primary);
+    }
+
+    /* Mobile Responsive */
+    @media (max-width: 768px) {
+        .hero-stats {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .features-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .quick-search {
+            grid-template-columns: 1fr;
+        }
+
+        .charts-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <h1 class="hero-title">KinoPlex</h1>
+        <p class="hero-subtitle">
+            Explore the next frontier of phosphoproteomics with our comprehensive database
+            of 1.4+ million phosphorylation sites, kinase predictions, and pathway annotations
+        </p>
+
+        <div class="hero-stats" id="hero-stats">
+            <div class="stat-card">
+                <div class="stat-value" id="total-sites">Loading...</div>
+                <div class="stat-label">Phosphorylation Sites</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="total-proteins">Loading...</div>
+                <div class="stat-label">Human Proteins</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="total-pathways">Loading...</div>
+                <div class="stat-label">Functional Pathways</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="significant-sites">Loading...</div>
+                <div class="stat-label">High-Confidence Sites</div>
+            </div>
+        </div>
+
+        <div class="mt-4">
+            <a href="/pathways" class="btn btn-primary">
+                <i class="fas fa-project-diagram"></i>
+                Explore Pathways
+            </a>
+            <a href="/proteins" class="btn btn-secondary" style="margin-left: 1rem;">
+                <i class="fas fa-dna"></i>
+                Browse Proteins
+            </a>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features-section">
+        <h2 class="section-title">Platform Capabilities</h2>
+
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-search"></i>
+                </div>
+                <h3 class="feature-title">Pathway Discovery</h3>
+                <p class="feature-description">
+                    Explore phosphorylation patterns across 28,000+ curated pathways from MSigDB,
+                    including hallmark processes, KEGG pathways, and GO annotations.
+                </p>
+                <div class="feature-stats">
+                    <div class="mini-stat"><strong>28K+</strong> pathways</div>
+                    <div class="mini-stat"><strong>3M+</strong> associations</div>
+                </div>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-atom"></i>
+                </div>
+                <h3 class="feature-title">Structural Context</h3>
+                <p class="feature-description">
+                    Understand phosphorylation sites in their 3D context with 70+ structural
+                    features derived from AlphaFold2 structures and machine learning predictions.
+                </p>
+                <div class="feature-stats">
+                    <div class="mini-stat"><strong>70+</strong> features</div>
+                    <div class="mini-stat"><strong>AlphaFold2</strong> based</div>
+                </div>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-cogs"></i>
+                </div>
+                <h3 class="feature-title">Kinase Predictions</h3>
+                <p class="feature-description">
+                    Predict kinase-substrate relationships with confidence scores for 303 human
+                    kinases using advanced machine learning and motif analysis.
+                </p>
+                <div class="feature-stats">
+                    <div class="mini-stat"><strong>303</strong> kinases</div>
+                    <div class="mini-stat"><strong>ML</strong> powered</div>
+                </div>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <h3 class="feature-title">Interactive Analysis</h3>
+                <p class="feature-description">
+                    Visualize and analyze phosphoproteomics data with interactive charts,
+                    protein structure viewers, and pathway enrichment tools.
+                </p>
+                <div class="feature-stats">
+                    <div class="mini-stat"><strong>Real-time</strong> analysis</div>
+                    <div class="mini-stat"><strong>Interactive</strong> viz</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Interactive Demo Section -->
+    <section class="demo-section">
+        <h2 class="section-title">Quick Search Demo</h2>
+
+        <div class="demo-container">
+            <p class="mb-4" style="color: var(--text-secondary);">
+                Try searching for pathways or proteins to see the platform in action
+            </p>
+
+            <div class="quick-search">
+                <div class="search-card">
+                    <h3><i class="fas fa-project-diagram"></i> Search Pathways</h3>
+                    <div class="search-box">
+                        <input type="text" class="form-control" id="pathway-search"
+                               placeholder="Try 'apoptosis', 'cell cycle', or 'metabolism'">
+                    </div>
+                    <div class="search-results" id="pathway-results"></div>
+                </div>
+
+                <div class="search-card">
+                    <h3><i class="fas fa-dna"></i> Search Proteins</h3>
+                    <div class="search-box">
+                        <input type="text" class="form-control" id="protein-search"
+                               placeholder="Try 'TP53', 'AKT1', or 'BRCA1'">
+                    </div>
+                    <div class="search-results" id="protein-results"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Data Visualization Section -->
+    <section class="charts-section">
+        <h2 class="section-title">Database Overview</h2>
+
+        <div class="charts-grid">
+            <div class="chart-card">
+                <h3 class="chart-title">Prediction Confidence Distribution</h3>
+                <canvas id="confidence-chart" width="400" height="300"></canvas>
+            </div>
+
+            <div class="chart-card">
+                <h3 class="chart-title">Pathway Collections</h3>
+                <canvas id="pathways-chart" width="400" height="300"></canvas>
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    class HomePage {
+        constructor() {
+            this.stats = null;
+            this.init();
+        }
+
+        async init() {
+            await this.loadStats();
+            this.setupSearch();
+            this.createCharts();
+        }
+
+        async loadStats() {
+            this.stats = await KinoAPI.get('/stats/overview');
+            if (this.stats) {
+                this.updateStatsDisplay();
+            }
+        }
+
+        updateStatsDisplay() {
+            const statsElements = {
+                'total-sites': this.stats.total_sites,
+                'total-proteins': this.stats.total_proteins,
+                'total-pathways': this.stats.total_pathways,
+                'significant-sites': this.stats.significant_sites
+            };
+
+            Object.entries(statsElements).forEach(([id, value]) => {
+                const element = document.getElementById(id);
+                if (element && value !== undefined) {
+                    this.animateNumber(element, 0, value, 2000);
+                }
+            });
+        }
+
+        animateNumber(element, start, end, duration) {
+            const range = end - start;
+            const startTime = performance.now();
+
+            const updateNumber = (currentTime) => {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+
+                // Easing function for smooth animation
+                const easeOut = 1 - Math.pow(1 - progress, 3);
+                const current = Math.floor(start + range * easeOut);
+
+                element.textContent = KinoAPI.formatNumber(current);
+
+                if (progress < 1) {
+                    requestAnimationFrame(updateNumber);
+                }
+            };
+
+            requestAnimationFrame(updateNumber);
+        }
+
+        setupSearch() {
+            // Pathway search
+            const pathwayInput = document.getElementById('pathway-search');
+            const pathwayResults = document.getElementById('pathway-results');
+
+            pathwayInput.addEventListener('input',
+                this.debounce(() => this.searchPathways(pathwayInput.value, pathwayResults), 300)
+            );
+
+            // Protein search
+            const proteinInput = document.getElementById('protein-search');
+            const proteinResults = document.getElementById('protein-results');
+
+            proteinInput.addEventListener('input',
+                this.debounce(() => this.searchProteins(proteinInput.value, proteinResults), 300)
+            );
+        }
+
+        debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        async searchPathways(query, resultsElement) {
+            if (!query || query.length < 2) {
+                resultsElement.innerHTML = '';
+                return;
+            }
+
+            KinoAPI.showLoading(resultsElement);
+
+            const data = await KinoAPI.get(`/search/pathways?q=${encodeURIComponent(query)}&limit=5`);
+
+            if (data && data.pathways) {
+                resultsElement.innerHTML = data.pathways.map(pathway => `
+                    <div class="search-result" onclick="window.location.href='/pathways?pathway=${pathway.gs_id}'">
+                        <strong>${pathway.gs_name}</strong>
+                        <br>
+                        <small style="color: var(--text-muted);">
+                            ${pathway.gs_collection} • ${KinoAPI.formatNumber(pathway.gene_count)} genes
+                        </small>
+                    </div>
+                `).join('');
+            }
+        }
+
+        async searchProteins(query, resultsElement) {
+            if (!query || query.length < 1) {
+                resultsElement.innerHTML = '';
+                return;
+            }
+
+            KinoAPI.showLoading(resultsElement);
+
+            const data = await KinoAPI.get(`/search/proteins?q=${encodeURIComponent(query)}&limit=5`);
+
+            if (data && data.proteins) {
+                resultsElement.innerHTML = data.proteins.map(protein => `
+                    <div class="search-result" onclick="window.location.href='/proteins?protein=${protein.gene_symbol}'">
+                        <strong>${protein.gene_symbol}</strong>
+                        <br>
+                        <small style="color: var(--text-muted);">
+                            ${KinoAPI.formatNumber(protein.site_count)} sites •
+                            ${KinoAPI.formatNumber(protein.significant_sites)} significant
+                        </small>
+                    </div>
+                `).join('');
+            }
+        }
+
+        createCharts() {
+            if (this.stats) {
+                this.createConfidenceChart();
+                this.createPathwayChart();
+            }
+        }
+
+        createConfidenceChart() {
+            const ctx = document.getElementById('confidence-chart').getContext('2d');
+            const data = this.stats.quality_distribution;
+
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Very High (>0.9)', 'High (0.7-0.9)', 'Moderate (0.5-0.7)', 'Low (<0.5)'],
+                    datasets: [{
+                        data: [data.very_high, data.high, data.moderate, data.low],
+                        backgroundColor: [
+                            'rgba(16, 185, 129, 0.8)',
+                            'rgba(59, 130, 246, 0.8)',
+                            'rgba(245, 158, 11, 0.8)',
+                            'rgba(239, 68, 68, 0.8)'
+                        ],
+                        borderColor: [
+                            'rgb(16, 185, 129)',
+                            'rgb(59, 130, 246)',
+                            'rgb(245, 158, 11)',
+                            'rgb(239, 68, 68)'
+                        ],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                color: '#8b9dc3',
+                                font: {
+                                    family: 'Inter'
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        createPathwayChart() {
+            const ctx = document.getElementById('pathways-chart').getContext('2d');
+            const collections = this.stats.pathway_collections.slice(0, 6);
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: collections.map(c => c.gs_collection),
+                    datasets: [{
+                        label: 'Pathway Count',
+                        data: collections.map(c => c.count),
+                        backgroundColor: 'rgba(139, 92, 246, 0.8)',
+                        borderColor: 'rgb(139, 92, 246)',
+                        borderWidth: 2,
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                color: '#8b9dc3',
+                                font: {
+                                    family: 'Inter'
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        },
+                        y: {
+                            ticks: {
+                                color: '#8b9dc3',
+                                font: {
+                                    family: 'Inter'
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    // Initialize homepage when DOM is ready
+    document.addEventListener('DOMContentLoaded', () => {
+        new HomePage();
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,932 @@
+{% extends "base.html" %}
+
+{% block title %}Pathway Explorer - KinoPlex{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Search Interface */
+    .search-header {
+        background: var(--glass-bg);
+        border-radius: 20px;
+        padding: 3rem;
+        margin-bottom: 3rem;
+        backdrop-filter: blur(20px);
+        border: 1px solid var(--border-color);
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .search-header::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: conic-gradient(from 0deg at 50% 50%,
+            rgba(59, 130, 246, 0.1) 0deg,
+            rgba(139, 92, 246, 0.1) 120deg,
+            rgba(236, 72, 153, 0.1) 240deg,
+            rgba(59, 130, 246, 0.1) 360deg);
+        animation: rotate 20s linear infinite;
+        pointer-events: none;
+    }
+
+    @keyframes rotate {
+        to { transform: rotate(360deg); }
+    }
+
+    .search-title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
+        position: relative;
+        z-index: 10;
+        color: var(--text-primary);
+    }
+
+    .search-subtitle {
+        color: var(--text-secondary);
+        font-size: 1.1rem;
+        margin-bottom: 2rem;
+        position: relative;
+        z-index: 10;
+    }
+
+    .search-controls {
+        display: grid;
+        grid-template-columns: 1fr auto auto;
+        gap: 1rem;
+        max-width: 800px;
+        margin: 0 auto;
+        position: relative;
+        z-index: 10;
+    }
+
+    .advanced-search {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 1rem;
+        margin-top: 1.5rem;
+        position: relative;
+        z-index: 10;
+    }
+
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .filter-label {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+    }
+
+    .form-select {
+        padding: 0.75rem;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border-color);
+        border-radius: 10px;
+        color: var(--text-primary);
+        font-size: 0.9rem;
+        transition: var(--transition-smooth);
+    }
+
+    .form-select:focus {
+        outline: none;
+        border-color: var(--accent-blue);
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    /* Results Layout */
+    .results-layout {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 2rem;
+    }
+
+    .results-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 0;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .results-count {
+        color: var(--text-secondary);
+        font-weight: 500;
+    }
+
+    .sort-controls {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+    }
+
+    .sort-label {
+        color: var(--text-secondary);
+        font-size: 0.875rem;
+    }
+
+    /* Pathway Cards */
+    .pathway-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+        gap: 2rem;
+        margin-top: 2rem;
+    }
+
+    .pathway-card {
+        background: var(--glass-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 2rem;
+        backdrop-filter: blur(20px);
+        transition: var(--transition-smooth);
+        position: relative;
+        overflow: hidden;
+        cursor: pointer;
+    }
+
+    .pathway-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 3px;
+        background: var(--gradient-primary);
+        transform: scaleX(0);
+        transition: var(--transition-smooth);
+    }
+
+    .pathway-card:hover {
+        transform: translateY(-8px);
+        box-shadow: var(--shadow-elevated);
+        border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .pathway-card:hover::before {
+        transform: scaleX(1);
+    }
+
+    .pathway-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 1.5rem;
+    }
+
+    .pathway-collection {
+        background: var(--gradient-accent);
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .pathway-name {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        color: var(--text-primary);
+        line-height: 1.4;
+    }
+
+    .pathway-description {
+        color: var(--text-secondary);
+        line-height: 1.5;
+        margin-bottom: 1.5rem;
+        overflow: hidden;
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 3;
+    }
+
+    .pathway-stats {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .stat-item {
+        text-align: center;
+        padding: 0.75rem;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 10px;
+        transition: var(--transition-smooth);
+    }
+
+    .stat-item:hover {
+        background: rgba(255, 255, 255, 0.1);
+    }
+
+    .stat-number {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        font-family: 'JetBrains Mono', monospace;
+    }
+
+    .stat-text {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-top: 0.25rem;
+    }
+
+    .pathway-actions {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 1.5rem;
+    }
+
+    .btn-sm {
+        padding: 0.5rem 1rem;
+        font-size: 0.875rem;
+        border-radius: 8px;
+    }
+
+    /* Detail Panel */
+    .detail-panel {
+        position: fixed;
+        top: 0;
+        right: -500px;
+        width: 500px;
+        height: 100vh;
+        background: var(--secondary-bg);
+        border-left: 1px solid var(--border-color);
+        backdrop-filter: blur(20px);
+        z-index: 2000;
+        transition: var(--transition-smooth);
+        overflow-y: auto;
+    }
+
+    .detail-panel.active {
+        right: 0;
+        box-shadow: -10px 0 30px rgba(0, 0, 0, 0.3);
+    }
+
+    .detail-header {
+        padding: 2rem;
+        border-bottom: 1px solid var(--border-color);
+        position: sticky;
+        top: 0;
+        background: var(--secondary-bg);
+        backdrop-filter: blur(20px);
+    }
+
+    .detail-close {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        background: none;
+        border: none;
+        color: var(--text-secondary);
+        font-size: 1.5rem;
+        cursor: pointer;
+        padding: 0.5rem;
+        border-radius: 8px;
+        transition: var(--transition-smooth);
+    }
+
+    .detail-close:hover {
+        color: var(--text-primary);
+        background: rgba(255, 255, 255, 0.1);
+    }
+
+    .detail-content {
+        padding: 0 2rem 2rem;
+    }
+
+    .detail-section {
+        margin-bottom: 2rem;
+    }
+
+    .detail-section h3 {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        color: var(--text-primary);
+        border-bottom: 1px solid var(--border-color);
+        padding-bottom: 0.5rem;
+    }
+
+    .protein-list {
+        max-height: 300px;
+        overflow-y: auto;
+    }
+
+    .protein-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem;
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: 8px;
+        margin-bottom: 0.5rem;
+        transition: var(--transition-smooth);
+        cursor: pointer;
+    }
+
+    .protein-item:hover {
+        background: rgba(255, 255, 255, 0.08);
+        transform: translateX(4px);
+    }
+
+    .protein-name {
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+
+    .protein-sites {
+        color: var(--text-secondary);
+        font-size: 0.875rem;
+    }
+
+    /* Loading States */
+    .loading-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+        gap: 2rem;
+        margin-top: 2rem;
+    }
+
+    .loading-card {
+        background: var(--glass-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 2rem;
+        backdrop-filter: blur(20px);
+    }
+
+    .skeleton {
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+        background-size: 200% 100%;
+        animation: shimmer 1.5s infinite;
+        border-radius: 4px;
+    }
+
+    @keyframes shimmer {
+        0% { background-position: -200% 0; }
+        100% { background-position: 200% 0; }
+    }
+
+    .skeleton-text {
+        height: 1rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .skeleton-text.wide { width: 80%; }
+    .skeleton-text.medium { width: 60%; }
+    .skeleton-text.narrow { width: 40%; }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .search-controls {
+            grid-template-columns: 1fr;
+        }
+
+        .advanced-search {
+            grid-template-columns: 1fr;
+        }
+
+        .pathway-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .detail-panel {
+            width: 100vw;
+            right: -100vw;
+        }
+
+        .pathway-stats {
+            grid-template-columns: 1fr;
+        }
+
+        .sort-controls {
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Search Header -->
+    <div class="search-header">
+        <h1 class="search-title">
+            <i class="fas fa-project-diagram"></i>
+            Pathway Explorer
+        </h1>
+        <p class="search-subtitle">
+            Discover phosphorylation patterns across 28,000+ curated biological pathways
+        </p>
+
+        <div class="search-controls">
+            <div class="search-box">
+                <input type="text" class="form-control" id="pathway-search"
+                       placeholder="Search pathways by name or description...">
+            </div>
+            <button class="btn btn-primary" id="search-btn">
+                <i class="fas fa-search"></i>
+                Search
+            </button>
+            <button class="btn btn-secondary" id="advanced-toggle">
+                <i class="fas fa-sliders-h"></i>
+                Filters
+            </button>
+        </div>
+
+        <div class="advanced-search" id="advanced-search" style="display: none;">
+            <div class="filter-group">
+                <label class="filter-label">Collection</label>
+                <select class="form-select" id="collection-filter">
+                    <option value="">All Collections</option>
+                    <option value="Hallmark">Hallmark Pathways</option>
+                    <option value="KEGG">KEGG Pathways</option>
+                    <option value="GO_Biological_Process">GO Biological Process</option>
+                    <option value="Reactome">Reactome Pathways</option>
+                    <option value="Canonical_Pathways">Canonical Pathways</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">Minimum Genes</label>
+                <select class="form-select" id="min-genes-filter">
+                    <option value="0">Any Size</option>
+                    <option value="10">10+ genes</option>
+                    <option value="25">25+ genes</option>
+                    <option value="50">50+ genes</option>
+                    <option value="100">100+ genes</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">Results Limit</label>
+                <select class="form-select" id="limit-filter">
+                    <option value="20">20 results</option>
+                    <option value="50">50 results</option>
+                    <option value="100">100 results</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results Section -->
+    <div class="results-section" id="results-section" style="display: none;">
+        <div class="results-header">
+            <div class="results-count" id="results-count">
+                Found 0 pathways
+            </div>
+            <div class="sort-controls">
+                <span class="sort-label">Sort by:</span>
+                <select class="form-select" id="sort-select" style="width: auto;">
+                    <option value="significant_sites">Significant Sites</option>
+                    <option value="gene_count">Gene Count</option>
+                    <option value="name">Name</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="pathway-grid" id="pathway-grid">
+            <!-- Pathway cards will be inserted here -->
+        </div>
+    </div>
+
+    <!-- Loading State -->
+    <div class="loading-section" id="loading-section" style="display: none;">
+        <div class="loading-grid">
+            <div class="loading-card">
+                <div class="skeleton skeleton-text wide"></div>
+                <div class="skeleton skeleton-text medium"></div>
+                <div class="skeleton skeleton-text narrow"></div>
+                <div style="height: 1rem;"></div>
+                <div class="skeleton skeleton-text wide"></div>
+                <div class="skeleton skeleton-text medium"></div>
+            </div>
+            <div class="loading-card">
+                <div class="skeleton skeleton-text wide"></div>
+                <div class="skeleton skeleton-text medium"></div>
+                <div class="skeleton skeleton-text narrow"></div>
+                <div style="height: 1rem;"></div>
+                <div class="skeleton skeleton-text wide"></div>
+                <div class="skeleton skeleton-text medium"></div>
+            </div>
+            <div class="loading-card">
+                <div class="skeleton skeleton-text wide"></div>
+                <div class="skeleton skeleton-text medium"></div>
+                <div class="skeleton skeleton-text narrow"></div>
+                <div style="height: 1rem;"></div>
+                <div class="skeleton skeleton-text wide"></div>
+                <div class="skeleton skeleton-text medium"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Empty State -->
+    <div class="empty-state" id="empty-state" style="text-align: center; padding: 4rem 0; display: none;">
+        <div class="glass-card" style="max-width: 500px; margin: 0 auto;">
+            <i class="fas fa-search" style="font-size: 3rem; color: var(--text-muted); margin-bottom: 1rem;"></i>
+            <h3 style="margin-bottom: 1rem; color: var(--text-secondary);">No pathways found</h3>
+            <p style="color: var(--text-muted);">
+                Try adjusting your search terms or filters to find relevant pathways.
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- Detail Panel -->
+<div class="detail-panel" id="detail-panel">
+    <div class="detail-header">
+        <button class="detail-close" id="detail-close">
+            <i class="fas fa-times"></i>
+        </button>
+        <h2 id="detail-title">Pathway Details</h2>
+        <div id="detail-collection" class="pathway-collection" style="margin-top: 0.5rem;"></div>
+    </div>
+
+    <div class="detail-content">
+        <div class="detail-section">
+            <h3>Description</h3>
+            <p id="detail-description"></p>
+        </div>
+
+        <div class="detail-section">
+            <h3>Statistics</h3>
+            <div class="pathway-stats" id="detail-stats">
+                <!-- Stats will be populated here -->
+            </div>
+        </div>
+
+        <div class="detail-section">
+            <h3>Associated Proteins</h3>
+            <div class="protein-list" id="detail-proteins">
+                <!-- Protein list will be populated here -->
+            </div>
+        </div>
+
+        <div class="detail-section">
+            <div class="pathway-actions">
+                <a class="btn btn-primary" id="detail-analyze" href="#">
+                    <i class="fas fa-chart-bar"></i>
+                    Analyze Pathway
+                </a>
+                <a class="btn btn-secondary" id="detail-export" href="#">
+                    <i class="fas fa-download"></i>
+                    Export Data
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Overlay -->
+<div class="overlay" id="overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 1999; opacity: 0; visibility: hidden; transition: all 0.3s ease;"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    class PathwayExplorer {
+        constructor() {
+            this.pathways = [];
+            this.currentQuery = '';
+            this.currentFilters = {};
+            this.isLoading = false;
+
+            this.init();
+        }
+
+        init() {
+            this.setupEventListeners();
+            this.checkUrlParams();
+        }
+
+        setupEventListeners() {
+            // Search functionality
+            const searchInput = document.getElementById('pathway-search');
+            const searchBtn = document.getElementById('search-btn');
+
+            searchInput.addEventListener('input', this.debounce(() => {
+                if (searchInput.value.trim()) {
+                    this.performSearch();
+                }
+            }, 300));
+
+            searchInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    this.performSearch();
+                }
+            });
+
+            searchBtn.addEventListener('click', () => this.performSearch());
+
+            // Advanced search toggle
+            const advancedToggle = document.getElementById('advanced-toggle');
+            const advancedSearch = document.getElementById('advanced-search');
+
+            advancedToggle.addEventListener('click', () => {
+                const isVisible = advancedSearch.style.display === 'grid';
+                advancedSearch.style.display = isVisible ? 'none' : 'grid';
+                advancedToggle.innerHTML = isVisible
+                    ? '<i class="fas fa-sliders-h"></i> Filters'
+                    : '<i class="fas fa-times"></i> Hide';
+            });
+
+            // Filter changes
+            ['collection-filter', 'min-genes-filter', 'limit-filter'].forEach(id => {
+                document.getElementById(id).addEventListener('change', () => {
+                    if (this.currentQuery) {
+                        this.performSearch();
+                    }
+                });
+            });
+
+            // Sort changes
+            document.getElementById('sort-select').addEventListener('change', () => {
+                if (this.pathways.length > 0) {
+                    this.sortAndDisplayPathways();
+                }
+            });
+
+            // Detail panel
+            document.getElementById('detail-close').addEventListener('click', () => {
+                this.closeDetailPanel();
+            });
+
+            document.getElementById('overlay').addEventListener('click', () => {
+                this.closeDetailPanel();
+            });
+        }
+
+        checkUrlParams() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const pathwayId = urlParams.get('pathway');
+            const query = urlParams.get('q');
+
+            if (query) {
+                document.getElementById('pathway-search').value = query;
+                this.performSearch();
+            } else if (pathwayId) {
+                this.showPathwayDetail(parseInt(pathwayId));
+            }
+        }
+
+        debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        async performSearch() {
+            const query = document.getElementById('pathway-search').value.trim();
+
+            if (!query) {
+                this.hideAllSections();
+                return;
+            }
+
+            this.currentQuery = query;
+            this.currentFilters = {
+                collection: document.getElementById('collection-filter').value,
+                min_genes: document.getElementById('min-genes-filter').value,
+                limit: document.getElementById('limit-filter').value
+            };
+
+            this.showLoadingState();
+
+            // Build query parameters
+            const params = new URLSearchParams({
+                q: query,
+                ...this.currentFilters
+            });
+
+            const data = await KinoAPI.get(`/search/pathways?${params}`);
+
+            if (data && data.pathways) {
+                this.pathways = data.pathways;
+                this.displayResults();
+
+                // Update URL
+                const newUrl = new URL(window.location);
+                newUrl.searchParams.set('q', query);
+                window.history.replaceState({}, '', newUrl);
+            } else {
+                this.showEmptyState();
+            }
+        }
+
+        showLoadingState() {
+            this.hideAllSections();
+            document.getElementById('loading-section').style.display = 'block';
+            this.isLoading = true;
+        }
+
+        hideAllSections() {
+            ['results-section', 'loading-section', 'empty-state'].forEach(id => {
+                document.getElementById(id).style.display = 'none';
+            });
+        }
+
+        displayResults() {
+            this.hideAllSections();
+
+            if (this.pathways.length === 0) {
+                this.showEmptyState();
+                return;
+            }
+
+            // Update results count
+            const count = this.pathways.length;
+            document.getElementById('results-count').textContent =
+                `Found ${KinoAPI.formatNumber(count)} pathway${count !== 1 ? 's' : ''}`;
+
+            this.sortAndDisplayPathways();
+            document.getElementById('results-section').style.display = 'block';
+            this.isLoading = false;
+        }
+
+        sortAndDisplayPathways() {
+            const sortBy = document.getElementById('sort-select').value;
+
+            this.pathways.sort((a, b) => {
+                switch (sortBy) {
+                    case 'significant_sites':
+                        return (b.significant_sites || 0) - (a.significant_sites || 0);
+                    case 'gene_count':
+                        return b.gene_count - a.gene_count;
+                    case 'name':
+                        return a.gs_name.localeCompare(b.gs_name);
+                    default:
+                        return 0;
+                }
+            });
+
+            this.renderPathwayCards();
+        }
+
+        renderPathwayCards() {
+            const grid = document.getElementById('pathway-grid');
+
+            grid.innerHTML = this.pathways.map(pathway => `
+                <div class="pathway-card" onclick="pathwayExplorer.showPathwayDetail(${pathway.gs_id})">
+                    <div class="pathway-header">
+                        <div class="pathway-collection">${pathway.gs_collection}</div>
+                    </div>
+
+                    <h3 class="pathway-name">${pathway.gs_name}</h3>
+
+                    <p class="pathway-description">
+                        ${pathway.gs_description || 'No description available'}
+                    </p>
+
+                    <div class="pathway-stats">
+                        <div class="stat-item">
+                            <div class="stat-number">${KinoAPI.formatNumber(pathway.gene_count || 0)}</div>
+                            <div class="stat-text">Genes</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-number">${KinoAPI.formatNumber(pathway.significant_sites || 0)}</div>
+                            <div class="stat-text">Sig. Sites</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-number">
+                                ${pathway.gs_pmid ? '<i class="fas fa-external-link-alt"></i>' : '-'}
+                            </div>
+                            <div class="stat-text">Reference</div>
+                        </div>
+                    </div>
+
+                    <div class="pathway-actions">
+                        <button class="btn btn-sm btn-primary">
+                            <i class="fas fa-eye"></i>
+                            View Details
+                        </button>
+                        <button class="btn btn-sm btn-secondary">
+                            <i class="fas fa-chart-bar"></i>
+                            Analyze
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        showEmptyState() {
+            this.hideAllSections();
+            document.getElementById('empty-state').style.display = 'block';
+            this.isLoading = false;
+        }
+
+        async showPathwayDetail(pathwayId) {
+            // Show loading in panel
+            document.getElementById('detail-title').textContent = 'Loading...';
+            document.getElementById('detail-collection').textContent = '';
+            document.getElementById('detail-description').textContent = '';
+            document.getElementById('detail-stats').innerHTML = '';
+            document.getElementById('detail-proteins').innerHTML = '<div class="flex-center"><div class="loading-spinner"></div></div>';
+
+            this.openDetailPanel();
+
+            const data = await KinoAPI.get(`/pathway/${pathwayId}`);
+
+            if (data && data.pathway) {
+                this.populateDetailPanel(data);
+            } else {
+                document.getElementById('detail-title').textContent = 'Error loading pathway';
+            }
+        }
+
+        populateDetailPanel(data) {
+            const { pathway, proteins, stats } = data;
+
+            // Basic info
+            document.getElementById('detail-title').textContent = pathway.gs_name;
+            document.getElementById('detail-collection').textContent = pathway.gs_collection;
+            document.getElementById('detail-description').textContent =
+                pathway.gs_description || 'No description available';
+
+            // Statistics
+            const statsHtml = `
+                <div class="stat-item">
+                    <div class="stat-number">${KinoAPI.formatNumber(stats.total_genes || 0)}</div>
+                    <div class="stat-text">Total Genes</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">${KinoAPI.formatNumber(stats.total_sites || 0)}</div>
+                    <div class="stat-text">Phospho Sites</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">${KinoAPI.formatNumber(stats.significant_sites || 0)}</div>
+                    <div class="stat-text">Significant</div>
+                </div>
+            `;
+            document.getElementById('detail-stats').innerHTML = statsHtml;
+
+            // Proteins list
+            const proteinsHtml = proteins.map(protein => `
+                <div class="protein-item" onclick="window.location.href='/proteins?protein=${protein.gene_symbol}'">
+                    <div>
+                        <div class="protein-name">${protein.gene_symbol}</div>
+                        <div class="protein-sites">
+                            ${KinoAPI.formatNumber(protein.total_sites || 0)} sites •
+                            ${KinoAPI.formatNumber(protein.significant_sites || 0)} significant
+                        </div>
+                    </div>
+                    <i class="fas fa-chevron-right" style="color: var(--text-muted);"></i>
+                </div>
+            `).join('');
+
+            document.getElementById('detail-proteins').innerHTML = proteinsHtml ||
+                '<div style="text-align: center; color: var(--text-muted); padding: 2rem;">No proteins found</div>';
+
+            // Action links
+            document.getElementById('detail-analyze').href = `/discover?pathway=${pathway.gs_id}`;
+            document.getElementById('detail-export').href = `/api/pathway/${pathway.gs_id}/export`;
+
+            // Update URL
+            const newUrl = new URL(window.location);
+            newUrl.searchParams.set('pathway', pathway.gs_id);
+            window.history.replaceState({}, '', newUrl);
+        }
+
+        openDetailPanel() {
+            document.getElementById('detail-panel').classList.add('active');
+            document.getElementById('overlay').style.opacity = '1';
+            document.getElementById('overlay').style.visibility = 'visible';
+            document.body.style.overflow = 'hidden';
+        }
+
+        closeDetailPanel() {
+            document.getElementById('detail-panel').classList.remove('active');
+            document.getElementById('overlay').style.opacity = '0';
+            document.getElementById('overlay').style.visibility = 'hidden';
+            document.body.style.overflow = 'auto';
+
+            // Clean URL
+            const newUrl = new URL(window.location);
+            newUrl.searchParams.delete('pathway');
+            window.history.replaceState({}, '', newUrl);
+        }
+    }
+
+    // Initialize pathway explorer
+    let pathwayExplorer;
+    document.addEventListener('DOMContentLoaded', () => {
+        pathwayExplorer = new PathwayExplorer();
+    });
+</script>
+{% endblock %}

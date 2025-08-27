@@ -1,3 +1,4 @@
+<!-- Updated pathway_analysis.html with complete JavaScript -->
 {% extends "base.html" %}
 
 {% block title %}{{ pathway_name }} Analysis - KinoPlex{% endblock %}
@@ -95,15 +96,6 @@
         background: var(--accent-blue);
         cursor: pointer;
         box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
-    }
-
-    .slider::-moz-range-thumb {
-        width: 18px;
-        height: 18px;
-        border-radius: 50%;
-        background: var(--accent-blue);
-        cursor: pointer;
-        border: none;
     }
 
     /* View Switcher */
@@ -258,7 +250,7 @@
     /* Protein Linear View */
     .protein-sequence {
         position: relative;
-        height: 120px;
+        height: 150px;
         margin: 2rem 0;
         background: rgba(255, 255, 255, 0.03);
         border-radius: 10px;
@@ -271,7 +263,7 @@
         left: 5%;
         right: 5%;
         height: 8px;
-        background: var(--gradient-secondary);
+        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
         border-radius: 4px;
         transform: translateY(-50%);
     }
@@ -414,6 +406,24 @@
         margin-top: 0.25rem;
     }
 
+    /* Site Tooltip */
+    .site-tooltip {
+        position: absolute;
+        background: var(--secondary-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 1rem;
+        z-index: 1000;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.3s;
+        max-width: 300px;
+    }
+
+    .site-tooltip.visible {
+        opacity: 1;
+    }
+
     /* Loading and Empty States */
     .loading-state {
         display: flex;
@@ -431,7 +441,6 @@
         border-radius: 50%;
         border-top-color: var(--accent-blue);
         animation: spin 1s ease-in-out infinite;
-        margin-bottom: 2rem;
     }
 
     /* Responsive Design */
@@ -446,14 +455,6 @@
 
         .controls-grid {
             grid-template-columns: 1fr;
-        }
-
-        .view-switcher {
-            flex-direction: column;
-        }
-
-        .protein-stats {
-            grid-template-columns: repeat(2, 1fr);
         }
     }
 </style>
@@ -480,12 +481,12 @@
         <!-- Interactive Controls -->
         <div class="controls-panel">
             <h3 style="margin-bottom: 1.5rem; color: var(--text-primary);">
-                <i class="fas fa-sliders-h"></i> Interactive Filtering
+                <i class="fas fa-sliders-h"></i> Phosphocompetent Site Filtering
             </h3>
             <div class="controls-grid">
                 <div class="control-group">
                     <div class="control-label">
-                        Confidence Threshold
+                        Probability Threshold
                         <span class="control-value" id="confidence-value">0.5</span>
                     </div>
                     <input type="range" id="confidence-slider" class="slider"
@@ -497,45 +498,65 @@
                         <span class="control-value" id="qvalue-value">0.05</span>
                     </div>
                     <input type="range" id="qvalue-slider" class="slider"
-                           min="0.001" max="0.1" step="0.001" value="0.05">
+                           min="0.001" max="0.2" step="0.001" value="0.05">
                 </div>
                 <div class="control-group">
                     <div class="control-label">
-                        Residue Type
-                        <span class="control-value" id="residue-count">All</span>
+                        Min Kinase Score
+                        <span class="control-value" id="kinase-score-value">0.5</span>
                     </div>
-                    <select id="residue-filter" class="form-select">
-                        <option value="all">All Residues</option>
-                        <option value="S">Serine (S)</option>
-                        <option value="T">Threonine (T)</option>
-                        <option value="Y">Tyrosine (Y)</option>
-                    </select>
+                    <input type="range" id="kinase-score-slider" class="slider"
+                           min="0" max="1" step="0.05" value="0.5">
                 </div>
                 <div class="control-group">
-                    <button class="btn btn-primary" onclick="resetFilters()">
-                        <i class="fas fa-undo"></i> Reset Filters
+                    <button class="btn btn-primary" onclick="pathwayAnalysis.applyFilters()">
+                        <i class="fas fa-filter"></i> Apply Filters
                     </button>
+                    <button class="btn btn-secondary" onclick="pathwayAnalysis.resetFilters()">
+                        <i class="fas fa-undo"></i> Reset
+                    </button>
+                </div>
+            </div>
+
+            <!-- Real-time phosphocompetent stats -->
+            <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border-color);">
+                <div style="display: flex; justify-content: space-around; align-items: center;">
+                    <div>
+                        <strong>Phosphocompetent Sites:</strong>
+                        <span id="phosphocompetent-count" style="font-size: 1.5rem; color: var(--accent-blue); margin-left: 0.5rem;">0</span>
+                    </div>
+                    <div>
+                        <strong>S:</strong> <span id="serine-count" style="color: var(--accent-green);">0</span>
+                        <strong style="margin-left: 1rem;">T:</strong> <span id="threonine-count" style="color: var(--accent-purple);">0</span>
+                        <strong style="margin-left: 1rem;">Y:</strong> <span id="tyrosine-count" style="color: var(--accent-orange);">0</span>
+                    </div>
+                    <div>
+                        <strong>Mean pLDDT:</strong> <span id="mean-plddt">0</span>
+                    </div>
+                    <div>
+                        <strong>Mean SASA:</strong> <span id="mean-sasa">0</span>
+                    </div>
                 </div>
             </div>
         </div>
 
         <!-- View Switcher -->
         <div class="view-switcher">
-            <div class="view-tab active" data-view="overview" onclick="switchView('overview')">
+            <div class="view-tab active" data-view="overview" onclick="pathwayAnalysis.switchView('overview')">
                 <i class="fas fa-chart-pie"></i> Overview
             </div>
-            <div class="view-tab" data-view="proteins" onclick="switchView('proteins')">
+            <div class="view-tab" data-view="proteins" onclick="pathwayAnalysis.switchView('proteins')">
                 <i class="fas fa-dna"></i> Protein-Level
             </div>
-            <div class="view-tab" data-view="sites" onclick="switchView('sites')">
+            <div class="view-tab" data-view="sites" onclick="pathwayAnalysis.switchView('sites')">
                 <i class="fas fa-dot-circle"></i> Site-Level
             </div>
-            <div class="view-tab" data-view="kinases" onclick="switchView('kinases')">
+            <div class="view-tab" data-view="kinases" onclick="pathwayAnalysis.switchView('kinases')">
                 <i class="fas fa-cogs"></i> Kinase-Centric
             </div>
         </div>
 
-        <!-- Summary Statistics (Always Visible) -->
+        <!-- Summary Statistics -->
         <div class="summary-stats" id="summary-stats">
             <!-- Stats will be populated here -->
         </div>
@@ -545,19 +566,19 @@
             <div class="charts-grid">
                 <div class="chart-card">
                     <h3 class="chart-title">Confidence Distribution</h3>
-                    <canvas id="confidence-chart"></canvas>
+                    <canvas id="confidence-chart" height="300"></canvas>
                 </div>
                 <div class="chart-card">
                     <h3 class="chart-title">Residue Type Distribution</h3>
-                    <canvas id="residue-chart"></canvas>
+                    <canvas id="residue-chart" height="300"></canvas>
                 </div>
                 <div class="chart-card">
                     <h3 class="chart-title">Secondary Structure Context</h3>
-                    <canvas id="structure-chart"></canvas>
+                    <canvas id="structure-chart" height="300"></canvas>
                 </div>
                 <div class="chart-card">
                     <h3 class="chart-title">Top Enriched Kinases</h3>
-                    <canvas id="kinase-chart"></canvas>
+                    <canvas id="kinase-chart" height="300"></canvas>
                 </div>
             </div>
         </div>
@@ -576,14 +597,14 @@
                 <table class="sites-table" id="sites-table">
                     <thead>
                         <tr>
-                            <th onclick="sortTable(0)">Site ID <i class="fas fa-sort"></i></th>
-                            <th onclick="sortTable(1)">Protein <i class="fas fa-sort"></i></th>
-                            <th onclick="sortTable(2)">Position <i class="fas fa-sort"></i></th>
-                            <th onclick="sortTable(3)">Type <i class="fas fa-sort"></i></th>
-                            <th onclick="sortTable(4)">Confidence <i class="fas fa-sort"></i></th>
-                            <th onclick="sortTable(5)">Q-value <i class="fas fa-sort"></i></th>
-                            <th onclick="sortTable(6)">Structure <i class="fas fa-sort"></i></th>
-                            <th>Top Kinases</th>
+                            <th onclick="pathwayAnalysis.sortTable('site_id')">Site ID <i class="fas fa-sort"></i></th>
+                            <th onclick="pathwayAnalysis.sortTable('gene_symbol')">Protein <i class="fas fa-sort"></i></th>
+                            <th onclick="pathwayAnalysis.sortTable('position')">Position <i class="fas fa-sort"></i></th>
+                            <th onclick="pathwayAnalysis.sortTable('residue_type')">Type <i class="fas fa-sort"></i></th>
+                            <th onclick="pathwayAnalysis.sortTable('predicted_prob_calibrated')">Probability <i class="fas fa-sort"></i></th>
+                            <th onclick="pathwayAnalysis.sortTable('qvalue')">Q-value <i class="fas fa-sort"></i></th>
+                            <th onclick="pathwayAnalysis.sortTable('secondary_structure')">Structure <i class="fas fa-sort"></i></th>
+                            <th>Top 3 Kinases</th>
                         </tr>
                     </thead>
                     <tbody id="sites-table-body">
@@ -595,28 +616,39 @@
 
         <!-- Kinase-Centric View -->
         <div class="view-content" id="kinases-view" style="display: none;">
+            <div style="margin-bottom: 2rem;">
+                <h3>Kinase Enrichment Analysis</h3>
+                <p style="color: var(--text-secondary);">
+                    Kinases ranked by number of high-confidence phosphocompetent sites in this pathway
+                </p>
+            </div>
             <div class="kinases-grid" id="kinases-grid">
                 <!-- Kinase cards will be populated here -->
             </div>
         </div>
     </div>
 </div>
+
+<!-- Site Tooltip -->
+<div class="site-tooltip" id="site-tooltip"></div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-    class AdvancedPathwayAnalysis {
+    class ComprehensivePathwayAnalysis {
         constructor(pathwayId) {
             this.pathwayId = pathwayId;
             this.analysisData = null;
             this.filteredData = null;
             this.charts = {};
             this.currentView = 'overview';
+            this.sortColumn = 'predicted_prob_calibrated';
+            this.sortDirection = 'desc';
 
             this.filters = {
                 confidence: 0.5,
                 qvalue: 0.05,
-                residueType: 'all'
+                kinaseScore: 0.5
             };
 
             this.init();
@@ -654,23 +686,22 @@
             // Confidence slider
             const confidenceSlider = document.getElementById('confidence-slider');
             confidenceSlider.addEventListener('input', (e) => {
-                this.filters.confidence = parseFloat(e.target.value);
                 document.getElementById('confidence-value').textContent = e.target.value;
-                this.applyFilters();
+                this.filters.confidence = parseFloat(e.target.value);
             });
 
             // Q-value slider
             const qvalueSlider = document.getElementById('qvalue-slider');
             qvalueSlider.addEventListener('input', (e) => {
-                this.filters.qvalue = parseFloat(e.target.value);
                 document.getElementById('qvalue-value').textContent = e.target.value;
-                this.applyFilters();
+                this.filters.qvalue = parseFloat(e.target.value);
             });
 
-            // Residue filter
-            document.getElementById('residue-filter').addEventListener('change', (e) => {
-                this.filters.residueType = e.target.value;
-                this.applyFilters();
+            // Kinase score slider
+            const kinaseScoreSlider = document.getElementById('kinase-score-slider');
+            kinaseScoreSlider.addEventListener('input', (e) => {
+                document.getElementById('kinase-score-value').textContent = e.target.value;
+                this.filters.kinaseScore = parseFloat(e.target.value);
             });
         }
 
@@ -683,64 +714,111 @@
                 all_sites: this.analysisData.all_sites.filter(site => {
                     const conf = site.predicted_prob_calibrated || 0;
                     const qval = site.qvalue || 1;
-                    const residue = site.residue_type;
 
-                    if (conf < this.filters.confidence) return false;
-                    if (qval > this.filters.qvalue) return false;
-                    if (this.filters.residueType !== 'all' && residue !== this.filters.residueType) return false;
-
-                    return true;
+                    // Check if site meets phosphocompetent criteria
+                    return conf >= this.filters.confidence && qval <= this.filters.qvalue;
                 }),
                 proteins: this.analysisData.proteins.map(protein => ({
                     ...protein,
                     sites: protein.sites.filter(site => {
                         const conf = site.predicted_prob_calibrated || 0;
                         const qval = site.qvalue || 1;
-                        const residue = site.residue_type;
-
-                        if (conf < this.filters.confidence) return false;
-                        if (qval > this.filters.qvalue) return false;
-                        if (this.filters.residueType !== 'all' && residue !== this.filters.residueType) return false;
-
-                        return true;
+                        return conf >= this.filters.confidence && qval <= this.filters.qvalue;
                     })
-                })).filter(protein => protein.sites.length > 0)
+                })).filter(protein => protein.sites.length > 0),
+                enriched_kinases: this.analysisData.enriched_kinases.filter(kinase =>
+                    kinase.avg_score >= this.filters.kinaseScore
+                )
             };
 
-            // Update statistics
-            this.updateFilteredStats();
+            // Update phosphocompetent statistics
+            this.updatePhosphocompetentStats();
+            this.updateSummaryStats();
             this.renderCurrentView();
         }
 
-        updateFilteredStats() {
+        updatePhosphocompetentStats() {
             const sites = this.filteredData.all_sites;
 
+            // Count phosphocompetent sites by residue type
+            let serineCount = 0;
+            let threonineCount = 0;
+            let tyrosineCount = 0;
+            let totalPlddt = 0;
+            let pldddtCount = 0;
+            let totalSasa = 0;
+            let sasaCount = 0;
+
+            sites.forEach(site => {
+                if (site.residue_type === 'S') serineCount++;
+                else if (site.residue_type === 'T') threonineCount++;
+                else if (site.residue_type === 'Y') tyrosineCount++;
+
+                if (site.plddt !== null && site.plddt !== undefined) {
+                    totalPlddt += site.plddt;
+                    pldddtCount++;
+                }
+
+                if (site.sasa_ratio !== null && site.sasa_ratio !== undefined) {
+                    totalSasa += site.sasa_ratio;
+                    sasaCount++;
+                }
+            });
+
+            // Update UI
+            document.getElementById('phosphocompetent-count').textContent = sites.length;
+            document.getElementById('serine-count').textContent = serineCount;
+            document.getElementById('threonine-count').textContent = threonineCount;
+            document.getElementById('tyrosine-count').textContent = tyrosineCount;
+            document.getElementById('mean-plddt').textContent = pldddtCount > 0 ?
+                (totalPlddt / pldddtCount).toFixed(1) : '0';
+            document.getElementById('mean-sasa').textContent = sasaCount > 0 ?
+                (totalSasa / sasaCount).toFixed(3) : '0';
+        }
+
+        updateSummaryStats() {
+            const sites = this.filteredData.all_sites;
+            const proteins = this.filteredData.proteins;
+            const kinases = this.filteredData.enriched_kinases;
+
+            // Calculate statistics
             const stats = {
-                total_proteins: this.filteredData.proteins.length,
+                total_proteins: proteins.length,
                 total_sites: sites.length,
                 significant_sites: sites.filter(s => s.significant_fdr05).length,
-                high_confidence_sites: sites.filter(s => (s.predicted_prob_calibrated || 0) > 0.8).length,
-                avg_confidence: sites.length > 0 ? sites.reduce((sum, s) => sum + (s.predicted_prob_calibrated || 0), 0) / sites.length : 0,
-                serine_sites: sites.filter(s => s.residue_type === 'S').length,
-                threonine_sites: sites.filter(s => s.residue_type === 'T').length,
-                tyrosine_sites: sites.filter(s => s.residue_type === 'Y').length
+                high_confidence: sites.filter(s => (s.predicted_prob_calibrated || 0) > 0.8).length,
+                enriched_kinases: kinases.length,
+                avg_confidence: sites.length > 0 ?
+                    sites.reduce((sum, s) => sum + (s.predicted_prob_calibrated || 0), 0) / sites.length : 0
             };
 
-            // Structural features
-            const validSites = sites.filter(s => s.plddt !== null && s.plddt !== undefined);
-            const sasaSites = sites.filter(s => s.sasa_ratio !== null && s.sasa_ratio !== undefined);
-            const disorderSites = sites.filter(s => s.disorder_score !== null && s.disorder_score !== undefined);
-
-            const structuralStats = {
-                avg_plddt: validSites.length > 0 ? validSites.reduce((sum, s) => sum + s.plddt, 0) / validSites.length : 0,
-                avg_sasa_ratio: sasaSites.length > 0 ? sasaSites.reduce((sum, s) => sum + s.sasa_ratio, 0) / sasaSites.length : 0,
-                avg_disorder: disorderSites.length > 0 ? disorderSites.reduce((sum, s) => sum + s.disorder_score, 0) / disorderSites.length : 0
-            };
-
-            this.filteredData.pathway_stats = stats;
-            this.filteredData.structural_stats = structuralStats;
-
-            this.updateSummaryStats();
+            const statsContainer = document.getElementById('summary-stats');
+            statsContainer.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-number">${this.formatNumber(stats.total_proteins)}</div>
+                    <div class="stat-label">Proteins</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${this.formatNumber(stats.total_sites)}</div>
+                    <div class="stat-label">Phosphocompetent Sites</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${this.formatNumber(stats.significant_sites)}</div>
+                    <div class="stat-label">Significant (FDR<0.05)</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${this.formatNumber(stats.high_confidence)}</div>
+                    <div class="stat-label">High Confidence (>0.8)</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${this.formatNumber(stats.enriched_kinases)}</div>
+                    <div class="stat-label">Enriched Kinases</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${(stats.avg_confidence * 100).toFixed(1)}%</div>
+                    <div class="stat-label">Avg Confidence</div>
+                </div>
+            `;
         }
 
         renderAnalysis() {
@@ -751,7 +829,7 @@
             // Populate header
             this.populateHeader();
 
-            // Render all views
+            // Render current view
             this.renderCurrentView();
         }
 
@@ -764,36 +842,23 @@
                 pathway.gs_description || 'Comprehensive phosphoproteomics analysis';
         }
 
-        updateSummaryStats() {
-            const { pathway_stats, structural_stats } = this.filteredData;
+        switchView(viewName) {
+            this.currentView = viewName;
 
-            const statsContainer = document.getElementById('summary-stats');
-            statsContainer.innerHTML = `
-                <div class="stat-card">
-                    <div class="stat-number">${this.formatNumber(pathway_stats.total_proteins)}</div>
-                    <div class="stat-label">Proteins</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number">${this.formatNumber(pathway_stats.total_sites)}</div>
-                    <div class="stat-label">Filtered Sites</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number">${this.formatNumber(pathway_stats.significant_sites)}</div>
-                    <div class="stat-label">Significant</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number">${(pathway_stats.avg_confidence * 100).toFixed(1)}%</div>
-                    <div class="stat-label">Avg Confidence</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number">${structural_stats.avg_plddt.toFixed(0)}</div>
-                    <div class="stat-label">Avg pLDDT</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number">${(structural_stats.avg_sasa_ratio * 100).toFixed(0)}%</div>
-                    <div class="stat-label">Avg SASA</div>
-                </div>
-            `;
+            // Update active tab
+            document.querySelectorAll('.view-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelector(`[data-view="${viewName}"]`).classList.add('active');
+
+            // Show/hide view content
+            document.querySelectorAll('.view-content').forEach(view => {
+                view.style.display = 'none';
+            });
+            document.getElementById(`${viewName}-view`).style.display = 'block';
+
+            // Render current view
+            this.renderCurrentView();
         }
 
         renderCurrentView() {
@@ -825,7 +890,7 @@
             if (!ctx) return;
 
             const sites = this.filteredData.all_sites;
-            const bins = [0, 0, 0, 0, 0]; // 0-0.2, 0.2-0.4, 0.4-0.6, 0.6-0.8, 0.8-1.0
+            const bins = [0, 0, 0, 0, 0];
 
             sites.forEach(site => {
                 const conf = site.predicted_prob_calibrated || 0;
@@ -862,16 +927,6 @@
                     maintainAspectRatio: false,
                     plugins: {
                         legend: { display: false }
-                    },
-                    scales: {
-                        x: {
-                            ticks: { color: '#8b9dc3' },
-                            grid: { color: 'rgba(255, 255, 255, 0.1)' }
-                        },
-                        y: {
-                            ticks: { color: '#8b9dc3' },
-                            grid: { color: 'rgba(255, 255, 255, 0.1)' }
-                        }
                     }
                 }
             });
@@ -881,7 +936,14 @@
             const ctx = document.getElementById('residue-chart')?.getContext('2d');
             if (!ctx) return;
 
-            const { pathway_stats } = this.filteredData;
+            const sites = this.filteredData.all_sites;
+            const residueCounts = { S: 0, T: 0, Y: 0 };
+
+            sites.forEach(site => {
+                if (site.residue_type in residueCounts) {
+                    residueCounts[site.residue_type]++;
+                }
+            });
 
             if (this.charts.residue) {
                 this.charts.residue.destroy();
@@ -892,13 +954,12 @@
                 data: {
                     labels: ['Serine (S)', 'Threonine (T)', 'Tyrosine (Y)'],
                     datasets: [{
-                        data: [pathway_stats.serine_sites, pathway_stats.threonine_sites, pathway_stats.tyrosine_sites],
+                        data: [residueCounts.S, residueCounts.T, residueCounts.Y],
                         backgroundColor: [
                             'rgba(59, 130, 246, 0.8)',
                             'rgba(139, 92, 246, 0.8)',
                             'rgba(236, 72, 153, 0.8)'
-                        ],
-                        borderWidth: 2
+                        ]
                     }]
                 },
                 options: {
@@ -906,8 +967,7 @@
                     maintainAspectRatio: false,
                     plugins: {
                         legend: {
-                            position: 'bottom',
-                            labels: { color: '#8b9dc3', font: { family: 'Inter' } }
+                            position: 'bottom'
                         }
                     }
                 }
@@ -941,8 +1001,7 @@
                             'rgba(236, 72, 153, 0.8)',
                             'rgba(6, 182, 212, 0.8)',
                             'rgba(107, 114, 128, 0.8)'
-                        ],
-                        borderWidth: 2
+                        ]
                     }]
                 },
                 options: {
@@ -950,8 +1009,7 @@
                     maintainAspectRatio: false,
                     plugins: {
                         legend: {
-                            position: 'bottom',
-                            labels: { color: '#8b9dc3', font: { family: 'Inter' } }
+                            position: 'bottom'
                         }
                     }
                 }
@@ -962,21 +1020,8 @@
             const ctx = document.getElementById('kinase-chart')?.getContext('2d');
             if (!ctx) return;
 
-            // Calculate kinase enrichment from filtered data
-            const kinaseData = {};
-            this.filteredData.all_sites.forEach(site => {
-                if (site.top_kinases) {
-                    site.top_kinases.forEach(k => {
-                        if (!kinaseData[k.kinase]) {
-                            kinaseData[k.kinase] = 0;
-                        }
-                        kinaseData[k.kinase]++;
-                    });
-                }
-            });
-
-            const topKinases = Object.entries(kinaseData)
-                .sort((a, b) => b[1] - a[1])
+            const topKinases = this.filteredData.enriched_kinases
+                .sort((a, b) => b.phosphocompetent_sites - a.phosphocompetent_sites)
                 .slice(0, 10);
 
             if (this.charts.kinase) {
@@ -986,14 +1031,13 @@
             this.charts.kinase = new Chart(ctx, {
                 type: 'bar',
                 data: {
-                    labels: topKinases.map(k => k[0]),
+                    labels: topKinases.map(k => k.kinase),
                     datasets: [{
-                        label: 'Site Count',
-                        data: topKinases.map(k => k[1]),
+                        label: 'Phosphocompetent Sites',
+                        data: topKinases.map(k => k.phosphocompetent_sites),
                         backgroundColor: 'rgba(16, 185, 129, 0.8)',
                         borderColor: 'rgb(16, 185, 129)',
-                        borderWidth: 2,
-                        borderRadius: 4
+                        borderWidth: 2
                     }]
                 },
                 options: {
@@ -1002,16 +1046,6 @@
                     indexAxis: 'y',
                     plugins: {
                         legend: { display: false }
-                    },
-                    scales: {
-                        x: {
-                            ticks: { color: '#8b9dc3' },
-                            grid: { color: 'rgba(255, 255, 255, 0.1)' }
-                        },
-                        y: {
-                            ticks: { color: '#8b9dc3', font: { family: 'JetBrains Mono' } },
-                            grid: { color: 'rgba(255, 255, 255, 0.1)' }
-                        }
                     }
                 }
             });
@@ -1022,7 +1056,12 @@
             const proteinsGrid = document.getElementById('proteins-grid');
 
             proteinsGrid.innerHTML = proteins.map(protein => {
-                const maxPosition = Math.max(...protein.sites.map(s => s.position));
+                const sites = protein.sites;
+                if (sites.length === 0) return '';
+
+                const positions = sites.map(s => s.position).filter(p => p);
+                const maxPosition = Math.max(...positions) || 100;
+                const minPosition = Math.min(...positions) || 1;
 
                 return `
                     <div class="protein-card">
@@ -1030,19 +1069,19 @@
                             <h3 class="protein-name">${protein.gene_symbol}</h3>
                             <div class="protein-stats">
                                 <div class="protein-stat">
-                                    <div class="number">${this.formatNumber(protein.sites.length)}</div>
-                                    <div>Sites</div>
+                                    <div class="number">${this.formatNumber(sites.length)}</div>
+                                    <div>Phosphocompetent</div>
                                 </div>
                                 <div class="protein-stat">
-                                    <div class="number">${this.formatNumber(protein.sites.filter(s => s.significant_fdr05).length)}</div>
+                                    <div class="number">${this.formatNumber(sites.filter(s => s.significant_fdr05).length)}</div>
                                     <div>Significant</div>
                                 </div>
                                 <div class="protein-stat">
-                                    <div class="number">${this.formatNumber(protein.sites.filter(s => (s.predicted_prob_calibrated || 0) > 0.8).length)}</div>
+                                    <div class="number">${this.formatNumber(sites.filter(s => (s.predicted_prob_calibrated || 0) > 0.8).length)}</div>
                                     <div>High Conf.</div>
                                 </div>
                                 <div class="protein-stat">
-                                    <div class="number">${((protein.sites.reduce((sum, s) => sum + (s.predicted_prob_calibrated || 0), 0) / protein.sites.length) * 100).toFixed(0)}%</div>
+                                    <div class="number">${((sites.reduce((sum, s) => sum + (s.predicted_prob_calibrated || 0), 0) / sites.length) * 100).toFixed(0)}%</div>
                                     <div>Avg Conf.</div>
                                 </div>
                             </div>
@@ -1050,21 +1089,28 @@
 
                         <div class="protein-sequence">
                             <div class="sequence-backbone"></div>
-                            ${protein.sites.map((site, index) => {
-                                const leftPercent = 5 + (site.position / maxPosition) * 90;
+                            ${sites.map(site => {
+                                const relativePos = ((site.position - minPosition) / (maxPosition - minPosition)) * 90 + 5;
                                 const confidence = site.predicted_prob_calibrated || 0;
                                 const confidenceClass = confidence > 0.8 ? 'high-confidence' :
-                                                      confidence > 0.5 ? 'medium-confidence' : 'low-confidence';
+                                                      confidence > 0.6 ? 'medium-confidence' : 'low-confidence';
                                 const significantClass = site.significant_fdr05 ? 'significant' : '';
+
+                                const topKinases = site.top_kinases || [];
+                                const kinaseInfo = topKinases.map(k => `${k.kinase}: ${k.score.toFixed(3)}`).join(', ');
 
                                 return `
                                     <div class="phospho-site ${confidenceClass} ${significantClass}"
-                                         style="left: ${leftPercent}%"
-                                         title="${site.gene_symbol} ${site.residue_type}${site.position} - Confidence: ${(confidence * 100).toFixed(1)}% - Top kinases: ${site.top_kinases ? site.top_kinases.map(k => k.kinase).join(', ') : 'N/A'}"
-                                         onclick="this.classList.toggle('selected')">
+                                         style="left: ${relativePos}%"
+                                         onmouseover="pathwayAnalysis.showSiteTooltip(event, '${protein.gene_symbol}', ${site.position}, '${site.residue_type}', ${confidence}, '${kinaseInfo}')"
+                                         onmouseout="pathwayAnalysis.hideSiteTooltip()">
                                     </div>
                                 `;
                             }).join('')}
+                        </div>
+
+                        <div style="margin-top: 1rem; font-size: 0.875rem; color: var(--text-secondary);">
+                            Sequence range: ${minPosition} - ${maxPosition}
                         </div>
                     </div>
                 `;
@@ -1072,7 +1118,18 @@
         }
 
         renderSitesTable() {
-            const sites = this.filteredData.all_sites.slice().sort((a, b) => (b.predicted_prob_calibrated || 0) - (a.predicted_prob_calibrated || 0));
+            // Sort sites before rendering
+            const sites = [...this.filteredData.all_sites];
+            sites.sort((a, b) => {
+                const aVal = a[this.sortColumn];
+                const bVal = b[this.sortColumn];
+
+                if (this.sortDirection === 'asc') {
+                    return aVal > bVal ? 1 : -1;
+                } else {
+                    return aVal < bVal ? 1 : -1;
+                }
+            });
 
             const tbody = document.getElementById('sites-table-body');
             tbody.innerHTML = sites.map(site => `
@@ -1086,9 +1143,9 @@
                     <td>${site.secondary_structure || 'N/A'}</td>
                     <td>
                         <div class="kinase-scores">
-                            ${site.top_kinases ? site.top_kinases.slice(0, 3).map(k =>
+                            ${(site.top_kinases || []).slice(0, 3).map(k =>
                                 `<div class="kinase-score">${k.kinase}: ${k.score.toFixed(3)}</div>`
-                            ).join('') : 'N/A'}
+                            ).join('') || 'N/A'}
                         </div>
                     </td>
                 </tr>
@@ -1096,40 +1153,8 @@
         }
 
         renderKinasesGrid() {
-            // Calculate kinase statistics from filtered data
-            const kinaseStats = {};
-
-            this.filteredData.all_sites.forEach(site => {
-                if (site.top_kinases) {
-                    site.top_kinases.forEach(k => {
-                        if (!kinaseStats[k.kinase]) {
-                            kinaseStats[k.kinase] = {
-                                kinase: k.kinase,
-                                site_count: 0,
-                                protein_count: 0,
-                                proteins: new Set(),
-                                avg_score: 0,
-                                max_score: 0,
-                                scores: []
-                            };
-                        }
-
-                        kinaseStats[k.kinase].site_count++;
-                        kinaseStats[k.kinase].proteins.add(site.gene_symbol);
-                        kinaseStats[k.kinase].scores.push(k.score);
-                    });
-                }
-            });
-
-            // Calculate final statistics and convert to array
-            const kinases = Object.values(kinaseStats).map(k => {
-                k.protein_count = k.proteins.size;
-                k.avg_score = k.scores.reduce((sum, s) => sum + s, 0) / k.scores.length;
-                k.max_score = Math.max(...k.scores);
-                delete k.proteins; // Remove Set object
-                delete k.scores; // Remove scores array
-                return k;
-            }).sort((a, b) => b.site_count - a.site_count);
+            const kinases = this.filteredData.enriched_kinases
+                .sort((a, b) => b.phosphocompetent_sites - a.phosphocompetent_sites);
 
             const kinasesGrid = document.getElementById('kinases-grid');
             kinasesGrid.innerHTML = kinases.map(kinase => `
@@ -1137,8 +1162,8 @@
                     <div class="kinase-name">${kinase.kinase}</div>
                     <div class="kinase-stats">
                         <div class="kinase-stat">
-                            <div class="number">${this.formatNumber(kinase.site_count)}</div>
-                            <div class="label">Sites</div>
+                            <div class="number">${this.formatNumber(kinase.phosphocompetent_sites)}</div>
+                            <div class="label">Phosphocompetent</div>
                         </div>
                         <div class="kinase-stat">
                             <div class="number">${this.formatNumber(kinase.protein_count)}</div>
@@ -1151,6 +1176,51 @@
                     </div>
                 </div>
             `).join('');
+        }
+
+        sortTable(column) {
+            if (this.sortColumn === column) {
+                this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                this.sortColumn = column;
+                this.sortDirection = 'desc';
+            }
+            this.renderSitesTable();
+        }
+
+        showSiteTooltip(event, gene, position, residue, confidence, kinases) {
+            const tooltip = document.getElementById('site-tooltip');
+            tooltip.innerHTML = `
+                <strong>${gene} ${residue}${position}</strong><br>
+                Confidence: ${(confidence * 100).toFixed(1)}%<br>
+                <strong>Top Kinases:</strong><br>
+                ${kinases || 'None'}
+            `;
+            tooltip.style.left = event.pageX + 10 + 'px';
+            tooltip.style.top = event.pageY + 10 + 'px';
+            tooltip.classList.add('visible');
+        }
+
+        hideSiteTooltip() {
+            document.getElementById('site-tooltip').classList.remove('visible');
+        }
+
+        resetFilters() {
+            document.getElementById('confidence-slider').value = '0.5';
+            document.getElementById('qvalue-slider').value = '0.05';
+            document.getElementById('kinase-score-slider').value = '0.5';
+
+            this.filters = {
+                confidence: 0.5,
+                qvalue: 0.05,
+                kinaseScore: 0.5
+            };
+
+            document.getElementById('confidence-value').textContent = '0.5';
+            document.getElementById('qvalue-value').textContent = '0.05';
+            document.getElementById('kinase-score-value').textContent = '0.5';
+
+            this.applyFilters();
         }
 
         formatNumber(num) {
@@ -1171,72 +1241,14 @@
         }
     }
 
-    // View switching functionality
-    function switchView(viewName) {
-        pathwayAnalysis.currentView = viewName;
-
-        // Update active tab
-        document.querySelectorAll('.view-tab').forEach(tab => {
-            tab.classList.remove('active');
-        });
-        document.querySelector(`[data-view="${viewName}"]`).classList.add('active');
-
-        // Show/hide view content
-        document.querySelectorAll('.view-content').forEach(view => {
-            view.style.display = 'none';
-        });
-        document.getElementById(`${viewName}-view`).style.display = 'block';
-
-        // Render current view
-        pathwayAnalysis.renderCurrentView();
-    }
-
-    function resetFilters() {
-        document.getElementById('confidence-slider').value = '0.5';
-        document.getElementById('qvalue-slider').value = '0.05';
-        document.getElementById('residue-filter').value = 'all';
-
-        pathwayAnalysis.filters = {
-            confidence: 0.5,
-            qvalue: 0.05,
-            residueType: 'all'
-        };
-
-        document.getElementById('confidence-value').textContent = '0.5';
-        document.getElementById('qvalue-value').textContent = '0.05';
-        document.getElementById('residue-count').textContent = 'All';
-
-        pathwayAnalysis.applyFilters();
-    }
-
-    function sortTable(columnIndex) {
-        // Table sorting functionality
-        const table = document.getElementById('sites-table');
-        const tbody = table.getElementsByTagName('tbody')[0];
-        const rows = Array.from(tbody.rows);
-
-        const isNumeric = (str) => !isNaN(str) && !isNaN(parseFloat(str));
-
-        rows.sort((a, b) => {
-            const aValue = a.cells[columnIndex].textContent.trim();
-            const bValue = b.cells[columnIndex].textContent.trim();
-
-            if (isNumeric(aValue) && isNumeric(bValue)) {
-                return parseFloat(bValue) - parseFloat(aValue);
-            }
-            return aValue.localeCompare(bValue);
-        });
-
-        rows.forEach(row => tbody.appendChild(row));
-    }
-
     // Initialize analysis when page loads
+    let pathwayAnalysis;
     document.addEventListener('DOMContentLoaded', () => {
         const pathParts = window.location.pathname.split('/');
         const pathwayId = pathParts[2];
 
         if (pathwayId && !isNaN(pathwayId)) {
-            window.pathwayAnalysis = new AdvancedPathwayAnalysis(parseInt(pathwayId));
+            window.pathwayAnalysis = new ComprehensivePathwayAnalysis(parseInt(pathwayId));
         } else {
             document.getElementById('loading-state').innerHTML = `
                 <div style="text-align: center; color: var(--accent-pink);">

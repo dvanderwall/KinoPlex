@@ -623,6 +623,24 @@
         transform: scale(1.02);
     }
 
+    .protein-kinase-detail {
+        margin-top: 1rem;
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 12px;
+        padding: 1.5rem;
+        display: none;
+        animation: slideDown 0.3s ease;
+    }
+
+    .protein-kinase-detail.expanded {
+        display: block;
+    }
+
+    @keyframes slideDown {
+        from { opacity: 0; transform: translateY(-20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
     /* Sort Indicators */
     .sort-asc::after { content: ' ↑'; color: var(--accent-blue); }
     .sort-desc::after { content: ' ↓'; color: var(--accent-blue); }
@@ -1019,7 +1037,7 @@ class EnhancedPathwayKinaseAnalysis {
             return;
         }
 
-        // Create chart with the new Chart.js v4 syntax
+        // Create chart with the Chart.js syntax
         this.charts.family = new Chart(ctx, {
             type: 'bar',
             data: {

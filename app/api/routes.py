@@ -45,13 +45,13 @@ def get_pathway_analysis(pathway_id):
 
         # STEP 1: Get pathway info using gs_id (pathway_id)
         pathway = execute_query("""
-            SELECT gs_id, gs_name, 
-                   COALESCE(gs_collection, 'Unknown') as gs_collection, 
-                   COALESCE(gs_description, 'No description available') as gs_description,
-                   gs_pmid
-            FROM gene_sets 
-            WHERE gs_id = ?
-        """, (pathway_id,), fetch_one=True)
+                    SELECT gs_id, gs_name, 
+                           COALESCE(gs_collection, 'Unknown') as gs_collection, 
+                           COALESCE(gs_description, 'No description available') as gs_description,
+                           gs_pmid
+                    FROM gene_sets 
+                    WHERE gs_id = ?
+                """, (pathway_id,), fetch_one=True)
 
         if not pathway:
             current_app.logger.error(f"Pathway not found for gs_id: {pathway_id}")
@@ -62,11 +62,11 @@ def get_pathway_analysis(pathway_id):
 
         # STEP 2: Get proteins in this pathway using gs_id
         proteins_in_pathway = execute_query("""
-            SELECT DISTINCT gene_symbol
-            FROM gene_set_memberships
-            WHERE gs_id = ?
-            LIMIT 100
-        """, (pathway_id,))
+                    SELECT DISTINCT gene_symbol
+                    FROM gene_set_memberships
+                    WHERE gs_id = ?
+                    LIMIT 100
+                """, (pathway_id,))
 
         protein_list = [p['gene_symbol'] for p in proteins_in_pathway]
         current_app.logger.info(f"Found {len(protein_list)} proteins in pathway")
@@ -74,25 +74,25 @@ def get_pathway_analysis(pathway_id):
         # STEP 3: Get pathway-level kinase enrichment using gs_name
         # This is the critical query that needs to be fixed
         enriched_kinases = execute_query("""
-            SELECT 
-                kinase,
-                score_integrated,
-                rank_integrated,
-                n_genes_with_kinase,
-                gene_coverage,
-                fisher_p,
-                enrichment_ratio,
-                score_zscore_only,
-                score_ratio_based,
-                mean_enrichment,
-                max_enrichment,
-                n_total_sites,
-                prop_significant
-            FROM pathway_kinase_mapping 
-            WHERE gs_name = ? AND score_integrated IS NOT NULL
-            ORDER BY score_integrated DESC
-            LIMIT 50
-        """, (gs_name,))
+                    SELECT 
+                        kinase,
+                        score_integrated,
+                        rank_integrated,
+                        n_genes_with_kinase,
+                        gene_coverage,
+                        fisher_p,
+                        enrichment_ratio,
+                        score_zscore_only,
+                        score_ratio_based,
+                        mean_enrichment,
+                        max_enrichment,
+                        n_total_sites,
+                        prop_significant
+                    FROM pathway_kinase_mapping 
+                    WHERE gs_name = ? AND score_integrated IS NOT NULL
+                    ORDER BY score_integrated DESC
+                    LIMIT 50
+                """, (gs_name,))
 
         current_app.logger.info(f"Found {len(enriched_kinases)} enriched kinases from pathway_kinase_mapping")
 
@@ -101,10 +101,34 @@ def get_pathway_analysis(pathway_id):
             current_app.logger.warning(f"No enriched kinases found for pathway: {gs_name}")
             # Try a broader query to debug
             test_query = execute_query("""
-                SELECT COUNT(*) as count FROM pathway_kinase_mapping 
-                WHERE gs_name LIKE ?
-            """, (f"%{gs_name.split()[0]}%",), fetch_one=True)
+                        SELECT COUNT(*) as count FROM pathway_kinase_mapping 
+                        WHERE gs_name LIKE ?
+                    """, (f"%{gs_name.split()[0]}%",), fetch_one=True)
             current_app.logger.info(f"Partial name match found {test_query['count']} rows")
+
+            # Fallback: Try using a more flexible match approach for pathway names
+            if test_query['count'] > 0:
+                enriched_kinases = execute_query("""
+                            SELECT 
+                                kinase,
+                                score_integrated,
+                                rank_integrated,
+                                n_genes_with_kinase,
+                                gene_coverage,
+                                fisher_p,
+                                enrichment_ratio,
+                                score_zscore_only,
+                                score_ratio_based,
+                                mean_enrichment,
+                                max_enrichment,
+                                n_total_sites,
+                                prop_significant
+                            FROM pathway_kinase_mapping 
+                            WHERE gs_name LIKE ? AND score_integrated IS NOT NULL
+                            ORDER BY score_integrated DESC
+                            LIMIT 50
+                        """, (f"%{gs_name.split()[0]}%",))
+                current_app.logger.info(f"Using partial match, found {len(enriched_kinases)} enriched kinases")
 
         # STEP 4: Get protein-level enrichment for proteins in this pathway
         proteins_with_enrichment = []
@@ -182,6 +206,7 @@ def get_pathway_analysis(pathway_id):
             """, tuple(sample_proteins))
 
         # STEP 6: Calculate kinase family distribution from enriched kinases
+        # Calculate kinase family distribution from enriched kinases
         kinase_families = {}
         if enriched_kinases:
             family_scores = {}
@@ -209,7 +234,8 @@ def get_pathway_analysis(pathway_id):
                 'total_proteins': len(protein_list),
                 'total_sites': len(sample_sites),
                 'significant_sites': sum(1 for s in sample_sites if s.get('significant_fdr05')),
-                'avg_confidence': sum(s.get('predicted_prob_calibrated', 0) for s in sample_sites) / len(sample_sites) if sample_sites else 0,
+                'avg_confidence': sum(s.get('predicted_prob_calibrated', 0) for s in sample_sites) / len(
+                    sample_sites) if sample_sites else 0,
                 'residue_distribution': {
                     'serine': sum(1 for s in sample_sites if s.get('residue_type') == 'S'),
                     'threonine': sum(1 for s in sample_sites if s.get('residue_type') == 'T'),

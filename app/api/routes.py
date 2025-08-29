@@ -39,12 +39,11 @@ def execute_query(query, params=(), fetch_one=False):
 
 @bp.route('/pathway/<int:pathway_id>/analysis')
 def get_pathway_analysis(pathway_id):
-    """FINAL CORRECTED: Pathway analysis with proper pathway_id -> gs_name -> enrichment chain."""
+    """FIXED: Pathway analysis with proper pathway_id -> gs_name -> enrichment chain."""
     try:
         current_app.logger.info(f"=== PATHWAY ANALYSIS START: pathway_id={pathway_id} ===")
 
         # STEP 1: Get pathway info using gs_id (pathway_id)
-        current_app.logger.info("Step 1: Getting pathway by gs_id...")
         pathway = execute_query("""
             SELECT gs_id, gs_name, 
                    COALESCE(gs_collection, 'Unknown') as gs_collection, 
@@ -62,23 +61,18 @@ def get_pathway_analysis(pathway_id):
         current_app.logger.info(f"Found pathway: '{gs_name}' (gs_id: {pathway_id})")
 
         # STEP 2: Get proteins in this pathway using gs_id
-        current_app.logger.info("Step 2: Getting proteins in pathway...")
         proteins_in_pathway = execute_query("""
             SELECT DISTINCT gene_symbol
             FROM gene_set_memberships
             WHERE gs_id = ?
-            LIMIT 500
+            LIMIT 100
         """, (pathway_id,))
 
         protein_list = [p['gene_symbol'] for p in proteins_in_pathway]
         current_app.logger.info(f"Found {len(protein_list)} proteins in pathway")
 
-        if not protein_list:
-            current_app.logger.warning("No proteins found in pathway")
-            return jsonify({'error': 'No proteins found for this pathway'}), 404
-
-        # STEP 3: Get REAL pathway-level kinase enrichment using gs_name
-        current_app.logger.info(f"Step 3: Getting pathway-kinase mappings for gs_name: '{gs_name}'...")
+        # STEP 3: Get pathway-level kinase enrichment using gs_name
+        # This is the critical query that needs to be fixed
         enriched_kinases = execute_query("""
             SELECT 
                 kinase,
@@ -102,13 +96,22 @@ def get_pathway_analysis(pathway_id):
 
         current_app.logger.info(f"Found {len(enriched_kinases)} enriched kinases from pathway_kinase_mapping")
 
+        # Add debug output for troubleshooting
+        if len(enriched_kinases) == 0:
+            current_app.logger.warning(f"No enriched kinases found for pathway: {gs_name}")
+            # Try a broader query to debug
+            test_query = execute_query("""
+                SELECT COUNT(*) as count FROM pathway_kinase_mapping 
+                WHERE gs_name LIKE ?
+            """, (f"%{gs_name.split()[0]}%",), fetch_one=True)
+            current_app.logger.info(f"Partial name match found {test_query['count']} rows")
+
         # STEP 4: Get protein-level enrichment for proteins in this pathway
-        current_app.logger.info("Step 4: Getting protein-kinase enrichments...")
         proteins_with_enrichment = []
 
         if protein_list:
-            # Get protein-kinase enrichments for proteins in this pathway
-            placeholders = ','.join(['?' for _ in protein_list[:100]])  # Limit to first 100 for performance
+            # Get protein-kinase enrichments for top proteins in this pathway
+            placeholders = ','.join(['?' for _ in protein_list[:25]])  # Limit for performance
             protein_kinase_data = execute_query(f"""
                 SELECT 
                     gene_symbol,
@@ -123,14 +126,14 @@ def get_pathway_analysis(pathway_id):
                 FROM protein_kinase_enrichment
                 WHERE gene_symbol IN ({placeholders}) AND enrichment_score IS NOT NULL
                 ORDER BY gene_symbol, enrichment_score DESC
-            """, tuple(protein_list[:100]))
-
-            current_app.logger.info(f"Found {len(protein_kinase_data)} protein-kinase enrichment records")
+            """, tuple(protein_list[:25]))
 
             # Group by protein
-            protein_kinase_map = defaultdict(list)
+            protein_kinase_map = {}
             for row in protein_kinase_data:
-                protein_kinase_map[row['gene_symbol']].append(row)
+                if row['gene_symbol'] not in protein_kinase_map:
+                    protein_kinase_map[row['gene_symbol']] = []
+                protein_kinase_map[row['gene_symbol']].append(dict(row))
 
             # Create protein objects with phosphosite stats and kinase enrichments
             for gene_symbol in protein_list[:25]:  # Show top 25 proteins
@@ -154,13 +157,10 @@ def get_pathway_analysis(pathway_id):
 
                 proteins_with_enrichment.append(protein_data)
 
-        current_app.logger.info(f"Created {len(proteins_with_enrichment)} protein objects with enrichment data")
-
-        # STEP 5: Get sample phosphorylation sites from proteins in this pathway
-        current_app.logger.info("Step 5: Getting sample phosphorylation sites...")
+        # STEP 5: Get phosphorylation sites from proteins in this pathway
         sample_sites = []
         if protein_list:
-            sample_proteins = protein_list[:20]  # Sample from first 20 proteins
+            sample_proteins = protein_list[:10]  # Sample from first 10 proteins
             placeholders = ','.join(['?' for _ in sample_proteins])
 
             sample_sites = execute_query(f"""
@@ -181,15 +181,15 @@ def get_pathway_analysis(pathway_id):
                 LIMIT 200
             """, tuple(sample_proteins))
 
-        current_app.logger.info(f"Found {len(sample_sites)} sample sites")
-
         # STEP 6: Calculate kinase family distribution from enriched kinases
         kinase_families = {}
         if enriched_kinases:
-            family_scores = defaultdict(list)
+            family_scores = {}
             for kinase in enriched_kinases:
                 family = get_kinase_family(kinase['kinase'])
                 score = kinase['score_integrated'] or 0
+                if family not in family_scores:
+                    family_scores[family] = []
                 family_scores[family].append(score)
 
             for family, scores in family_scores.items():
@@ -198,66 +198,31 @@ def get_pathway_analysis(pathway_id):
                     'count': len(scores)
                 }
 
-            current_app.logger.info(f"Calculated kinase family distribution: {len(kinase_families)} families")
-
-        # STEP 7: Calculate pathway statistics
-        pathway_stats = {
-            'total_proteins': len(protein_list),
-            'total_sites': len(sample_sites),
-            'significant_sites': sum(1 for s in sample_sites if s.get('significant_fdr05')),
-            'avg_confidence': sum(s.get('predicted_prob_calibrated', 0) for s in sample_sites) / len(sample_sites) if sample_sites else 0
-        }
-
-        # Add residue distribution
-        pathway_stats['residue_distribution'] = {
-            'serine': sum(1 for s in sample_sites if s.get('residue_type') == 'S'),
-            'threonine': sum(1 for s in sample_sites if s.get('residue_type') == 'T'),
-            'tyrosine': sum(1 for s in sample_sites if s.get('residue_type') == 'Y')
-        }
-
-        # STEP 8: Structure and confidence distributions
-        structure_distribution = {}
-        confidence_distribution = {'low': 0, 'medium': 0, 'high': 0}
-
-        for site in sample_sites:
-            # Structure
-            struct = site.get('secondary_structure', 'Unknown')
-            structure_distribution[struct] = structure_distribution.get(struct, 0) + 1
-
-            # Confidence
-            conf = site.get('predicted_prob_calibrated', 0)
-            if conf < 0.7:
-                confidence_distribution['low'] += 1
-            elif conf < 0.9:
-                confidence_distribution['medium'] += 1
-            else:
-                confidence_distribution['high'] += 1
-
-        # STEP 9: Build final response
+        # Response data
         response_data = {
             'pathway': pathway,
             'proteins': proteins_with_enrichment,
             'sample_sites': sample_sites,
             'enriched_kinases': enriched_kinases,
             'kinase_families': kinase_families,
-            'pathway_stats': pathway_stats,
-            'structure_distribution': structure_distribution,
-            'confidence_distribution': confidence_distribution,
-            'structural_stats': {
-                'disorder': {'mean': 0.3, 'median': 0.25},
-                'sasa': {'mean': 0.45, 'median': 0.4}
+            'pathway_stats': {
+                'total_proteins': len(protein_list),
+                'total_sites': len(sample_sites),
+                'significant_sites': sum(1 for s in sample_sites if s.get('significant_fdr05')),
+                'avg_confidence': sum(s.get('predicted_prob_calibrated', 0) for s in sample_sites) / len(sample_sites) if sample_sites else 0,
+                'residue_distribution': {
+                    'serine': sum(1 for s in sample_sites if s.get('residue_type') == 'S'),
+                    'threonine': sum(1 for s in sample_sites if s.get('residue_type') == 'T'),
+                    'tyrosine': sum(1 for s in sample_sites if s.get('residue_type') == 'Y')
+                }
             },
             'analysis_metadata': {
                 'generated_at': time.time(),
                 'sites_analyzed': len(sample_sites),
                 'kinases_analyzed': len(enriched_kinases),
-                'proteins_analyzed': len(proteins_with_enrichment),
-                'analysis_type': 'real_enrichment_analysis_v2'
+                'proteins_analyzed': len(proteins_with_enrichment)
             }
         }
-
-        current_app.logger.info("=== PATHWAY ANALYSIS SUCCESS ===")
-        current_app.logger.info(f"Returning: {len(enriched_kinases)} kinases, {len(proteins_with_enrichment)} proteins, {len(sample_sites)} sites")
 
         return jsonify(response_data)
 
@@ -266,7 +231,6 @@ def get_pathway_analysis(pathway_id):
         import traceback
         current_app.logger.error(traceback.format_exc())
         return jsonify({'error': f'Failed to perform pathway analysis: {str(e)}'}), 500
-
 
 @bp.route('/search/pathways')
 def search_pathways():

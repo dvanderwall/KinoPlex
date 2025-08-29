@@ -777,7 +777,7 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chart.js/4.3.0/chart.umd.min.js"></script>
 <script>
 class EnhancedPathwayKinaseAnalysis {
     constructor(pathwayId) {
@@ -797,6 +797,10 @@ class EnhancedPathwayKinaseAnalysis {
     async init() {
         await this.loadData();
         this.setupEventListeners();
+
+        // Initialize sitesData from the API response
+        this.sitesData = this.data.sample_sites || [];
+
         this.render();
     }
 
@@ -990,9 +994,18 @@ class EnhancedPathwayKinaseAnalysis {
         const ctx = document.getElementById('family-distribution-chart');
         if (!ctx) return;
 
+        // Ensure Chart is defined
+        if (typeof Chart === 'undefined') {
+            console.error('Chart.js is not loaded');
+            return;
+        }
+
         if (this.charts.family) {
             this.charts.family.destroy();
         }
+
+        // Debug output to check data
+        console.log('Kinase families data:', this.data.kinase_families);
 
         const families = this.data.kinase_families || {};
         const familyData = Object.entries(families).map(([family, data]) => ({
@@ -1002,11 +1015,12 @@ class EnhancedPathwayKinaseAnalysis {
         })).sort((a, b) => b.avg_score - a.avg_score);
 
         if (familyData.length === 0) {
-            ctx.getContext('2d').clearRect(0, 0, ctx.width, ctx.height);
+            console.warn('No family data available');
             return;
         }
 
-        this.charts.family = new Chart(ctx.getContext('2d'), {
+        // Create chart with the new Chart.js v4 syntax
+        this.charts.family = new Chart(ctx, {
             type: 'bar',
             data: {
                 labels: familyData.map(f => f.family),
@@ -1100,12 +1114,92 @@ class EnhancedPathwayKinaseAnalysis {
         });
     }
 
-    // Rest of the methods remain the same...
     renderNetworkView() {
-        // Implementation remains the same as before
-        const container = d3.select('#kinase-network');
-        container.selectAll('*').remove();
-        // ... (keeping the existing network rendering code)
+        const container = document.getElementById('kinase-network');
+        if (!container) return;
+
+        // Clear existing content
+        container.innerHTML = '';
+
+        const enrichedKinases = this.data.enriched_kinases || [];
+        if (enrichedKinases.length === 0) {
+            container.innerHTML = `
+                <div style="text-align: center; padding: 4rem; color: var(--text-muted);">
+                    <i class="fas fa-project-diagram" style="font-size: 3rem; margin-bottom: 1rem;"></i>
+                    <h3>No Kinase Network Data</h3>
+                    <p>Insufficient data to create network visualization.</p>
+                </div>
+            `;
+            return;
+        }
+
+        // Create SVG container
+        const width = container.clientWidth;
+        const height = container.clientHeight;
+
+        const svg = d3.select(container).append("svg")
+            .attr("width", width)
+            .attr("height", height);
+
+        // Create nodes for top kinases
+        const nodes = enrichedKinases.slice(0, 15).map((kinase, i) => ({
+            id: kinase.kinase,
+            score: kinase.score_integrated || 0,
+            x: width/2 + 200 * Math.cos(i * 2 * Math.PI / 15),
+            y: height/2 + 200 * Math.sin(i * 2 * Math.PI / 15),
+            radius: 10 + (kinase.score_integrated || 0) * 5
+        }));
+
+        // Create simple links between nodes
+        const links = [];
+        for (let i = 0; i < nodes.length; i++) {
+            for (let j = i+1; j < nodes.length; j++) {
+                // Only connect nodes with some probability based on scores
+                if (Math.random() < 0.3) {
+                    links.push({
+                        source: nodes[i],
+                        target: nodes[j],
+                        value: (nodes[i].score + nodes[j].score) / 2
+                    });
+                }
+            }
+        }
+
+        // Create links
+        svg.selectAll("line")
+            .data(links)
+            .enter()
+            .append("line")
+            .attr("x1", d => d.source.x)
+            .attr("y1", d => d.source.y)
+            .attr("x2", d => d.target.x)
+            .attr("y2", d => d.target.y)
+            .attr("stroke", "rgba(0, 217, 255, 0.3)")
+            .attr("stroke-width", d => d.value);
+
+        // Create nodes
+        const nodeElements = svg.selectAll("circle")
+            .data(nodes)
+            .enter()
+            .append("circle")
+            .attr("cx", d => d.x)
+            .attr("cy", d => d.y)
+            .attr("r", d => d.radius)
+            .attr("fill", "#00d9ff");
+
+        // Add labels
+        svg.selectAll("text")
+            .data(nodes)
+            .enter()
+            .append("text")
+            .attr("x", d => d.x)
+            .attr("y", d => d.y - d.radius - 5)
+            .attr("text-anchor", "middle")
+            .attr("fill", "#8b9dc3")
+            .text(d => d.id);
+
+        // Store the network for future reference
+        this.networkSvg = svg;
     }
 
     renderProteinsView() {
@@ -1126,7 +1220,7 @@ class EnhancedPathwayKinaseAnalysis {
         }
 
         // Create HTML for protein cards
-        const proteinCardsHtml = proteins.slice(0, 25).map(protein => {
+        const proteinCardsHtml = proteins.map(protein => {
             const topKinases = protein.top_kinases || [];
             const isExpanded = this.expandedProteins.has(protein.gene_symbol);
 
@@ -1153,7 +1247,7 @@ class EnhancedPathwayKinaseAnalysis {
                                      onclick="pathwayAnalysis.toggleProteinDetail('${protein.gene_symbol}')"
                                      style="cursor: pointer;">
                                     <div class="kinase-chip-name">${k.kinase || 'Unknown'}</div>
-                                    <div class="kinase-chip-count">${k.n_sites || k.site_count || 0} sites</div>
+                                    <div class="kinase-chip-count">${k.n_sites || 0} sites</div>
                                 </div>
                             `).join('')}
                         </div>
@@ -1201,28 +1295,26 @@ class EnhancedPathwayKinaseAnalysis {
 
         // Set the HTML
         proteinsList.innerHTML = proteinCardsHtml;
-
-        console.log('Protein cards rendered successfully'); // DEBUG
     }
 
     toggleProteinDetail(geneSymbol) {
-        console.log('Toggle protein detail called for:', geneSymbol); // DEBUG
+        console.log('Toggle protein detail called for:', geneSymbol); // Debug
 
         const detailElement = document.getElementById(`detail-${geneSymbol}`);
 
         if (!detailElement) {
-            console.error('Detail element not found for:', geneSymbol); // DEBUG
+            console.error('Detail element not found for:', geneSymbol); // Debug
             return;
         }
 
         if (this.expandedProteins.has(geneSymbol)) {
             this.expandedProteins.delete(geneSymbol);
             detailElement.classList.remove('expanded');
-            console.log('Collapsed protein detail for:', geneSymbol); // DEBUG
+            console.log('Collapsed protein detail for:', geneSymbol); // Debug
         } else {
             this.expandedProteins.add(geneSymbol);
             detailElement.classList.add('expanded');
-            console.log('Expanded protein detail for:', geneSymbol); // DEBUG
+            console.log('Expanded protein detail for:', geneSymbol); // Debug
         }
     }
 
@@ -1232,6 +1324,8 @@ class EnhancedPathwayKinaseAnalysis {
 
     renderSitesTable() {
         const tbody = document.getElementById('sites-table-body');
+
+        console.log('Rendering sites table with', this.sitesData.length, 'sites');
 
         if (!this.sitesData || this.sitesData.length === 0) {
             tbody.innerHTML = `

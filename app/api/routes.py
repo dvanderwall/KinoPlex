@@ -366,9 +366,10 @@ def get_protein_details(gene_symbol):
         return jsonify({'error': 'Failed to retrieve protein details'}), 500
 
 
+# Enhanced pathway analysis endpoint in routes.py
 @bp.route('/pathway/<int:pathway_id>/analysis')
 def get_pathway_analysis(pathway_id):
-    """Optimized pathway-level phosphoproteomics analysis."""
+    """Comprehensive pathway-level phosphoproteomics analysis with enhanced metrics."""
     try:
         # Get pathway basic info
         pathway_query = """
@@ -381,15 +382,14 @@ def get_pathway_analysis(pathway_id):
         if not pathway:
             return jsonify({'error': 'Pathway not found'}), 404
 
-        # Get list of all kinase columns from the database schema
+        # Get list of all kinase columns for comprehensive analysis
         cursor = get_db().execute("SELECT * FROM phosphosites LIMIT 0")
         all_columns = [description[0] for description in cursor.description]
         kinase_columns = [col for col in all_columns if '_MotifScore' in col]
 
-        current_app.logger.info(f"Found {len(kinase_columns)} kinase columns for pathway {pathway_id}")
+        current_app.logger.info(f"Analyzing pathway {pathway_id} with {len(kinase_columns)} kinases")
 
-        # OPTIMIZATION 1: Only get phosphocompetent sites initially (prob > 0.5, qvalue < 0.05)
-        # This dramatically reduces the initial data load
+        # OPTIMIZED: Get high-quality phosphocompetent sites (prob ≥ 0.5, q ≤ 0.05)
         sites_query = f"""
         SELECT 
             p.site_id,
@@ -408,81 +408,88 @@ def get_pathway_analysis(pathway_id):
             p.disorder_score,
             p.neighbor_count,
             p.hydrogen_bonds,
-            p.hydroxyl_exposure
+            p.hydroxyl_exposure,
+            {', '.join(kinase_columns)}
         FROM gene_set_memberships gsm
         JOIN phosphosites p ON gsm.gene_symbol = p.gene_symbol
         WHERE gsm.gs_id = ?
           AND p.predicted_prob_calibrated >= 0.5
           AND p.qvalue <= 0.05
         ORDER BY p.predicted_prob_calibrated DESC
-        LIMIT 500
+        LIMIT 1000
         """
 
         sites_results = execute_query(sites_query, (pathway_id,))
 
         if not sites_results:
-            # If no phosphocompetent sites, get ANY sites (limited)
-            sites_query_fallback = """
-            SELECT 
-                p.site_id,
-                p.gene_symbol,
-                p.position,
-                p.residue_type,
-                p.motif,
-                p.predicted_prob_calibrated,
-                p.qvalue,
-                p.significant_fdr05,
-                p.plddt,
-                p.secondary_structure,
-                p.sasa_ratio,
-                p.disorder_score
-            FROM gene_set_memberships gsm
-            JOIN phosphosites p ON gsm.gene_symbol = p.gene_symbol
-            WHERE gsm.gs_id = ?
-            ORDER BY p.predicted_prob_calibrated DESC
-            LIMIT 100
-            """
-            sites_results = execute_query(sites_query_fallback, (pathway_id,))
+            return jsonify({'error': 'No high-quality phosphorylation sites found for this pathway'}), 404
 
-            if not sites_results:
-                return jsonify({'error': 'No phosphorylation sites found for this pathway'}), 404
-
-        # Convert to list of dicts
+        # Convert to list of dicts for easier processing
         all_sites = [dict(row) for row in sites_results]
 
-        current_app.logger.info(f"Processing {len(all_sites)} phosphocompetent sites")
+        # Calculate kinase enrichment with 75th percentile analysis
+        kinase_enrichment = {}
+        kinase_percentiles = {}
 
-        # OPTIMIZATION 2: Only get top kinases for each site, not all 303
-        # For each site, get only the top 3 kinase predictions
+        # First pass: collect all scores per kinase to calculate percentiles
+        for kinase_col in kinase_columns:
+            kinase_name = kinase_col.replace('_MotifScore', '')
+            scores = []
+            for site in all_sites:
+                score = site.get(kinase_col)
+                if score is not None and score > 0:
+                    scores.append(float(score))
+
+            if scores:
+                scores.sort()
+                # Calculate 75th percentile
+                percentile_75_idx = int(len(scores) * 0.75)
+                kinase_percentiles[kinase_name] = scores[percentile_75_idx] if percentile_75_idx < len(scores) else \
+                scores[-1]
+
+        # Second pass: analyze kinase enrichment with percentile thresholds
         for site in all_sites:
-            site_id = site['site_id']
+            for kinase_col in kinase_columns:
+                kinase_name = kinase_col.replace('_MotifScore', '')
+                score = site.get(kinase_col)
 
-            # Build a query to get just this site's kinase scores
-            kinase_cols_str = ', '.join(kinase_columns)
-            kinase_query = f"""
-            SELECT {kinase_cols_str}
-            FROM phosphosites
-            WHERE site_id = ?
-            """
+                if score is not None and score > 0:
+                    if kinase_name not in kinase_enrichment:
+                        kinase_enrichment[kinase_name] = {
+                            'kinase': kinase_name,
+                            'total_sites': 0,
+                            'high_confidence_sites': 0,  # above 75th percentile
+                            'proteins': set(),
+                            'scores': [],
+                            'avg_score': 0,
+                            'percentile_75': kinase_percentiles.get(kinase_name, 0)
+                        }
 
-            kinase_result = execute_query(kinase_query, (site_id,), fetch_one=True)
+                    enrichment = kinase_enrichment[kinase_name]
+                    enrichment['total_sites'] += 1
+                    enrichment['scores'].append(float(score))
+                    enrichment['proteins'].add(site['gene_symbol'])
 
-            if kinase_result:
-                # Extract and sort kinase scores
-                kinase_scores = []
-                for kinase_col in kinase_columns:
-                    score = kinase_result[kinase_col]
-                    if score is not None and score > 0:
-                        kinase_name = kinase_col.replace('_MotifScore', '')
-                        kinase_scores.append({'kinase': kinase_name, 'score': float(score)})
+                    # Check if above 75th percentile for this kinase
+                    if score >= kinase_percentiles.get(kinase_name, 0):
+                        enrichment['high_confidence_sites'] += 1
 
-                # Sort and get top 3
-                kinase_scores.sort(key=lambda x: x['score'], reverse=True)
-                site['top_kinases'] = kinase_scores[:3]
-            else:
-                site['top_kinases'] = []
+        # Finalize kinase enrichment statistics
+        enriched_kinases = []
+        for kinase_data in kinase_enrichment.values():
+            if kinase_data['scores']:
+                kinase_data['avg_score'] = sum(kinase_data['scores']) / len(kinase_data['scores'])
+                kinase_data['protein_count'] = len(kinase_data['proteins'])
+                # Remove the set for JSON serialization
+                del kinase_data['proteins']
+                del kinase_data['scores']
+                enriched_kinases.append(kinase_data)
 
-        # Organize by protein with statistics
+        # Sort kinases by high confidence sites (above 75th percentile)
+        enriched_kinases.sort(key=lambda x: x['high_confidence_sites'], reverse=True)
+        enriched_kinases = enriched_kinases[:30]  # Top 30 kinases
+
+        # Organize data by protein with enhanced kinase analysis
         proteins_data = {}
         for site in all_sites:
             gene = site['gene_symbol']
@@ -490,125 +497,319 @@ def get_pathway_analysis(pathway_id):
                 proteins_data[gene] = {
                     'gene_symbol': gene,
                     'sites': [],
+                    'kinase_associations': {},  # Store kinase-protein specific data
                     'stats': {
                         'total_sites': 0,
                         'significant_sites': 0,
-                        'phosphocompetent_sites': 0,
                         'high_confidence_sites': 0,
-                        'avg_confidence': 0
+                        'max_confidence': 0
                     }
                 }
+
+            # Add site to protein
             proteins_data[gene]['sites'].append(site)
 
-        # Calculate protein-level statistics
+            # Analyze kinase associations for this protein
+            for kinase_col in kinase_columns:
+                kinase_name = kinase_col.replace('_MotifScore', '')
+                score = site.get(kinase_col)
+
+                if score is not None and score > 0:
+                    if kinase_name not in proteins_data[gene]['kinase_associations']:
+                        proteins_data[gene]['kinase_associations'][kinase_name] = {
+                            'kinase': kinase_name,
+                            'sites': [],
+                            'above_75th_count': 0,
+                            'avg_score': 0,
+                            'max_score': 0
+                        }
+
+                    assoc = proteins_data[gene]['kinase_associations'][kinase_name]
+                    assoc['sites'].append({
+                        'site_id': site['site_id'],
+                        'position': site['position'],
+                        'residue_type': site['residue_type'],
+                        'score': float(score),
+                        'confidence': site['predicted_prob_calibrated'],
+                        'significant': site['significant_fdr05']
+                    })
+
+                    # Check if above 75th percentile
+                    if score >= kinase_percentiles.get(kinase_name, 0):
+                        assoc['above_75th_count'] += 1
+
+                    assoc['max_score'] = max(assoc['max_score'], float(score))
+
+        # Finalize protein statistics and kinase associations
         for gene, data in proteins_data.items():
             sites = data['sites']
+
+            # Calculate protein stats
             data['stats']['total_sites'] = len(sites)
             data['stats']['significant_sites'] = sum(1 for s in sites if s.get('significant_fdr05'))
-            data['stats']['phosphocompetent_sites'] = len(sites)  # All are phosphocompetent due to filter
             data['stats']['high_confidence_sites'] = sum(
                 1 for s in sites if (s.get('predicted_prob_calibrated', 0) > 0.8))
 
             confidences = [s.get('predicted_prob_calibrated', 0) for s in sites]
-            data['stats']['avg_confidence'] = sum(confidences) / len(confidences) if confidences else 0
+            data['stats']['max_confidence'] = max(confidences) if confidences else 0
 
-        # Calculate pathway-wide statistics
+            # Finalize kinase associations
+            for kinase_name, assoc in data['kinase_associations'].items():
+                if assoc['sites']:
+                    assoc['avg_score'] = sum(s['score'] for s in assoc['sites']) / len(assoc['sites'])
+                    assoc['site_count'] = len(assoc['sites'])
+
+            # Get top 10 kinases by sites above 75th percentile
+            top_kinases = sorted(
+                data['kinase_associations'].values(),
+                key=lambda x: x['above_75th_count'],
+                reverse=True
+            )[:10]
+
+            data['top_kinases'] = top_kinases
+
+        # Calculate comprehensive pathway statistics
         pathway_stats = {
             'total_proteins': len(proteins_data),
             'total_sites': len(all_sites),
             'significant_sites': sum(1 for s in all_sites if s.get('significant_fdr05')),
-            'phosphocompetent_sites': len(all_sites),
             'high_confidence_sites': sum(1 for s in all_sites if (s.get('predicted_prob_calibrated', 0) > 0.8)),
             'avg_confidence': sum(s.get('predicted_prob_calibrated', 0) for s in all_sites) / len(
                 all_sites) if all_sites else 0,
-            'serine_sites': sum(1 for s in all_sites if s.get('residue_type') == 'S'),
-            'threonine_sites': sum(1 for s in all_sites if s.get('residue_type') == 'T'),
-            'tyrosine_sites': sum(1 for s in all_sites if s.get('residue_type') == 'Y')
+            'residue_distribution': {
+                'serine': sum(1 for s in all_sites if s.get('residue_type') == 'S'),
+                'threonine': sum(1 for s in all_sites if s.get('residue_type') == 'T'),
+                'tyrosine': sum(1 for s in all_sites if s.get('residue_type') == 'Y')
+            }
         }
 
-        # Get enriched kinases across the pathway (limited to top 20)
-        kinase_enrichment = {}
-        for site in all_sites:
-            for kinase_data in site.get('top_kinases', []):
-                kinase = kinase_data['kinase']
-                if kinase not in kinase_enrichment:
-                    kinase_enrichment[kinase] = {
-                        'kinase': kinase,
-                        'site_count': 0,
-                        'protein_count': 0,
-                        'phosphocompetent_sites': 0,
-                        'avg_score': 0,
-                        'scores': [],
-                        'proteins': set()
-                    }
-
-                kinase_enrichment[kinase]['site_count'] += 1
-                kinase_enrichment[kinase]['scores'].append(kinase_data['score'])
-                kinase_enrichment[kinase]['proteins'].add(site['gene_symbol'])
-                kinase_enrichment[kinase]['phosphocompetent_sites'] += 1
-
-        # Calculate final kinase statistics
-        enriched_kinases = []
-        for kinase_data in kinase_enrichment.values():
-            scores = kinase_data['scores']
-            if scores:
-                kinase_data['avg_score'] = sum(scores) / len(scores)
-                kinase_data['protein_count'] = len(kinase_data['proteins'])
-                del kinase_data['proteins']  # Remove set for JSON serialization
-                del kinase_data['scores']
-                enriched_kinases.append(kinase_data)
-
-        # Sort and limit to top 20 kinases
-        enriched_kinases.sort(key=lambda x: x['phosphocompetent_sites'], reverse=True)
-        enriched_kinases = enriched_kinases[:20]
-
-        # Structure distribution
+        # Secondary structure distribution
         structure_distribution = {}
+        disorder_scores = []
+        sasa_scores = []
+
         for site in all_sites:
+            # Structure
             struct = site.get('secondary_structure', 'Unknown')
             structure_distribution[struct] = structure_distribution.get(struct, 0) + 1
 
-        # Confidence distribution bins
-        confidence_bins = {
-            '0.5-0.7': 0,
-            '0.7-0.9': 0,
-            '0.9-1.0': 0
-        }
+            # Collect scores for statistics
+            if site.get('disorder_score') is not None:
+                disorder_scores.append(site['disorder_score'])
+            if site.get('sasa_ratio') is not None:
+                sasa_scores.append(site['sasa_ratio'])
+
+        # Confidence distribution
+        confidence_distribution = {'low': 0, 'medium': 0, 'high': 0}
         for site in all_sites:
             conf = site.get('predicted_prob_calibrated', 0)
             if conf < 0.7:
-                confidence_bins['0.5-0.7'] += 1
+                confidence_distribution['low'] += 1
             elif conf < 0.9:
-                confidence_bins['0.7-0.9'] += 1
+                confidence_distribution['medium'] += 1
             else:
-                confidence_bins['0.9-1.0'] += 1
+                confidence_distribution['high'] += 1
+
+        # Calculate kinase co-enrichment network data
+        kinase_network = calculate_kinase_coenrichment(enriched_kinases[:20], all_sites, kinase_columns)
 
         return jsonify({
             'pathway': dict(pathway),
             'proteins': list(proteins_data.values()),
             'all_sites': all_sites,
             'enriched_kinases': enriched_kinases,
+            'kinase_network': kinase_network,
             'pathway_stats': pathway_stats,
             'structure_distribution': structure_distribution,
-            'confidence_distribution': confidence_bins,
+            'confidence_distribution': confidence_distribution,
+            'structural_stats': {
+                'disorder': {
+                    'mean': sum(disorder_scores) / len(disorder_scores) if disorder_scores else 0,
+                    'median': sorted(disorder_scores)[len(disorder_scores) // 2] if disorder_scores else 0
+                },
+                'sasa': {
+                    'mean': sum(sasa_scores) / len(sasa_scores) if sasa_scores else 0,
+                    'median': sorted(sasa_scores)[len(sasa_scores) // 2] if sasa_scores else 0
+                }
+            },
             'analysis_metadata': {
                 'generated_at': time.time(),
                 'sites_analyzed': len(all_sites),
-                'note': 'Showing top 500 phosphocompetent sites (prob≥0.5, q≤0.05)',
-                'total_kinases_found': len(enriched_kinases),
-                'analysis_type': 'optimized_phosphocompetent_focus'
+                'kinases_analyzed': len(enriched_kinases),
+                'analysis_type': 'enhanced_phosphocompetent_analysis'
             }
         })
 
     except Exception as e:
-        current_app.logger.error(f"Error in pathway analysis: {e}")
+        current_app.logger.error(f"Error in enhanced pathway analysis: {e}")
         import traceback
         current_app.logger.error(traceback.format_exc())
         return jsonify({'error': f'Failed to perform pathway analysis: {str(e)}'}), 500
 
-@bp.teardown_app_request
-def close_db(error):
-    """Close database connection."""
-    db = g.pop('db', None)
-    if db is not None:
-        db.close()
+
+def calculate_kinase_coenrichment(kinases, sites, kinase_columns):
+    """Calculate kinase co-enrichment network for pathway visualization."""
+    try:
+        # Create protein-kinase association matrix
+        protein_kinase_matrix = {}
+
+        for site in sites:
+            protein = site['gene_symbol']
+            if protein not in protein_kinase_matrix:
+                protein_kinase_matrix[protein] = {}
+
+            for kinase_col in kinase_columns:
+                kinase_name = kinase_col.replace('_MotifScore', '')
+                if kinase_name in [k['kinase'] for k in kinases]:
+                    score = site.get(kinase_col, 0)
+                    if score > 0:
+                        if kinase_name not in protein_kinase_matrix[protein]:
+                            protein_kinase_matrix[protein][kinase_name] = []
+                        protein_kinase_matrix[protein][kinase_name].append(score)
+
+        # Calculate kinase-kinase co-occurrence
+        kinase_names = [k['kinase'] for k in kinases]
+        cooccurrence_matrix = {}
+
+        for i, kinase1 in enumerate(kinase_names):
+            cooccurrence_matrix[kinase1] = {}
+            for j, kinase2 in enumerate(kinase_names):
+                if i != j:
+                    # Count proteins where both kinases are active
+                    shared_proteins = 0
+                    for protein, kinase_data in protein_kinase_matrix.items():
+                        if kinase1 in kinase_data and kinase2 in kinase_data:
+                            shared_proteins += 1
+
+                    cooccurrence_matrix[kinase1][kinase2] = shared_proteins
+
+        # Create network nodes and edges
+        nodes = []
+        for kinase in kinases:
+            nodes.append({
+                'id': kinase['kinase'],
+                'label': kinase['kinase'],
+                'size': kinase['high_confidence_sites'],
+                'group': kinase['kinase'][:3],  # Group by first 3 letters for coloring
+                'total_sites': kinase['total_sites'],
+                'protein_count': kinase['protein_count']
+            })
+
+        edges = []
+        for kinase1 in kinase_names:
+            for kinase2 in kinase_names:
+                if kinase1 != kinase2:
+                    weight = cooccurrence_matrix[kinase1][kinase2]
+                    if weight > 2:  # Only show meaningful connections
+                        edges.append({
+                            'source': kinase1,
+                            'target': kinase2,
+                            'weight': weight,
+                            'id': f"{kinase1}-{kinase2}"
+                        })
+
+        return {
+            'nodes': nodes,
+            'edges': edges,
+            'stats': {
+                'node_count': len(nodes),
+                'edge_count': len(edges),
+                'max_connections': max(
+                    [len([e for e in edges if e['source'] == n['id']]) for n in nodes]) if edges else 0
+            }
+        }
+
+    except Exception as e:
+        current_app.logger.error(f"Error calculating kinase co-enrichment: {e}")
+        return {'nodes': [], 'edges': [], 'stats': {'node_count': 0, 'edge_count': 0, 'max_connections': 0}}
+
+
+@bp.route('/pathway/<int:pathway_id>/protein/<gene_symbol>/kinases')
+def get_protein_kinase_details(pathway_id, gene_symbol):
+    """Get detailed kinase-protein associations for expanded view."""
+    try:
+        # Get kinase columns
+        cursor = get_db().execute("SELECT * FROM phosphosites LIMIT 0")
+        all_columns = [description[0] for description in cursor.description]
+        kinase_columns = [col for col in all_columns if '_MotifScore' in col]
+
+        # Get sites for this protein in this pathway
+        kinase_cols_str = ', '.join(kinase_columns)
+        query = f"""
+        SELECT 
+            p.site_id,
+            p.position,
+            p.residue_type,
+            p.motif,
+            p.predicted_prob_calibrated,
+            p.qvalue,
+            p.significant_fdr05,
+            p.secondary_structure,
+            p.plddt,
+            {kinase_cols_str}
+        FROM gene_set_memberships gsm
+        JOIN phosphosites p ON gsm.gene_symbol = p.gene_symbol
+        WHERE gsm.gs_id = ? AND p.gene_symbol = ?
+          AND p.predicted_prob_calibrated >= 0.5
+          AND p.qvalue <= 0.05
+        ORDER BY p.predicted_prob_calibrated DESC
+        """
+
+        sites = execute_query(query, (pathway_id, gene_symbol.upper()))
+
+        if not sites:
+            return jsonify({'error': 'No sites found'}), 404
+
+        # Process kinase associations
+        kinase_data = {}
+        for site in sites:
+            site_dict = dict(site)
+            for kinase_col in kinase_columns:
+                kinase_name = kinase_col.replace('_MotifScore', '')
+                score = site_dict.get(kinase_col)
+
+                if score is not None and score > 0:
+                    if kinase_name not in kinase_data:
+                        kinase_data[kinase_name] = {
+                            'kinase': kinase_name,
+                            'sites': [],
+                            'avg_score': 0,
+                            'max_score': 0,
+                            'site_count': 0
+                        }
+
+                    kinase_data[kinase_name]['sites'].append({
+                        'site_id': site_dict['site_id'],
+                        'position': site_dict['position'],
+                        'residue_type': site_dict['residue_type'],
+                        'motif': site_dict['motif'],
+                        'score': float(score),
+                        'confidence': site_dict['predicted_prob_calibrated'],
+                        'qvalue': site_dict['qvalue'],
+                        'significant': site_dict['significant_fdr05'],
+                        'structure': site_dict['secondary_structure'],
+                        'plddt': site_dict['plddt']
+                    })
+
+        # Calculate statistics
+        for kinase_name, data in kinase_data.items():
+            scores = [s['score'] for s in data['sites']]
+            if scores:
+                data['avg_score'] = sum(scores) / len(scores)
+                data['max_score'] = max(scores)
+                data['site_count'] = len(scores)
+
+        # Sort by average score
+        sorted_kinases = sorted(kinase_data.values(), key=lambda x: x['avg_score'], reverse=True)
+
+        return jsonify({
+            'gene_symbol': gene_symbol.upper(),
+            'pathway_id': pathway_id,
+            'kinase_associations': sorted_kinases,
+            'total_kinases': len(sorted_kinases),
+            'total_associations': sum(len(k['sites']) for k in sorted_kinases)
+        })
+
+    except Exception as e:
+        current_app.logger.error(f"Error getting protein kinase details: {e}")
+        return jsonify({'error': 'Failed to retrieve kinase details'}), 500

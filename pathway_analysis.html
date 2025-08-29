@@ -1,0 +1,1110 @@
+{% extends "base.html" %}
+
+{% block title %}{{ pathway_name }} - Kinase Dynamics Analysis{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Enhanced Color Palette for Kinase Visualization */
+    :root {
+        --kinase-gradient-1: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        --kinase-gradient-2: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        --kinase-gradient-3: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        --kinase-gradient-4: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        --kinase-gradient-5: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+        --network-node: #00d9ff;
+        --network-edge: rgba(0, 217, 255, 0.3);
+    }
+
+    /* Hero Header with Animated Background */
+    .pathway-hero {
+        background: var(--glass-bg);
+        border-radius: 24px;
+        padding: 3rem;
+        margin-bottom: 3rem;
+        position: relative;
+        overflow: hidden;
+        backdrop-filter: blur(20px);
+        border: 1px solid var(--border-color);
+    }
+
+    .pathway-hero::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle at 20% 50%, rgba(102, 126, 234, 0.15), transparent 50%),
+                    radial-gradient(circle at 80% 80%, rgba(118, 75, 162, 0.15), transparent 50%),
+                    radial-gradient(circle at 40% 20%, rgba(240, 147, 251, 0.1), transparent 50%);
+        animation: nebula 30s ease-in-out infinite;
+    }
+
+    @keyframes nebula {
+        0%, 100% { transform: rotate(0deg) scale(1); }
+        50% { transform: rotate(180deg) scale(1.1); }
+    }
+
+    .pathway-title {
+        font-size: 3rem;
+        font-weight: 800;
+        margin-bottom: 1rem;
+        background: var(--kinase-gradient-1);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        position: relative;
+        z-index: 10;
+    }
+
+    /* Key Metrics Cards */
+    .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+        margin: 2rem 0;
+        position: relative;
+        z-index: 10;
+    }
+
+    .metric-card {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 16px;
+        padding: 1.5rem;
+        text-align: center;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .metric-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 3px;
+        background: var(--kinase-gradient-1);
+    }
+
+    .metric-card:hover {
+        transform: translateY(-8px) scale(1.02);
+        box-shadow: 0 20px 40px rgba(102, 126, 234, 0.3);
+        border-color: rgba(102, 126, 234, 0.5);
+    }
+
+    .metric-value {
+        font-size: 2.5rem;
+        font-weight: 800;
+        color: var(--text-primary);
+        font-family: 'JetBrains Mono', monospace;
+        margin-bottom: 0.5rem;
+    }
+
+    .metric-label {
+        color: var(--text-secondary);
+        font-size: 0.875rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .metric-trend {
+        display: inline-block;
+        margin-top: 0.5rem;
+        padding: 0.25rem 0.75rem;
+        background: rgba(16, 185, 129, 0.2);
+        color: #10b981;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    /* Advanced View Tabs */
+    .view-tabs {
+        display: flex;
+        gap: 0.5rem;
+        padding: 0.5rem;
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: 16px;
+        margin-bottom: 2rem;
+        position: relative;
+    }
+
+    .view-tab {
+        flex: 1;
+        padding: 1rem 1.5rem;
+        background: transparent;
+        border: none;
+        color: var(--text-secondary);
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border-radius: 12px;
+        position: relative;
+        z-index: 2;
+    }
+
+    .view-tab:hover {
+        color: var(--text-primary);
+    }
+
+    .view-tab.active {
+        color: white;
+    }
+
+    .tab-indicator {
+        position: absolute;
+        height: calc(100% - 1rem);
+        background: var(--kinase-gradient-1);
+        border-radius: 12px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        top: 0.5rem;
+        z-index: 1;
+    }
+
+    /* Kinase Landscape Visualization */
+    .kinase-landscape {
+        background: var(--glass-bg);
+        border-radius: 20px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        border: 1px solid var(--border-color);
+        min-height: 500px;
+    }
+
+    .landscape-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 1.5rem;
+        color: var(--text-primary);
+    }
+
+    /* Kinase Cards */
+    .kinase-cards-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 1.5rem;
+        margin-top: 2rem;
+    }
+
+    .kinase-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 16px;
+        padding: 1.5rem;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .kinase-card::before {
+        content: '';
+        position: absolute;
+        top: -2px;
+        left: -2px;
+        right: -2px;
+        bottom: -2px;
+        background: var(--kinase-gradient-1);
+        border-radius: 16px;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        z-index: -1;
+    }
+
+    .kinase-card:hover::before {
+        opacity: 1;
+    }
+
+    .kinase-card:hover {
+        transform: translateY(-4px);
+        border-color: transparent;
+    }
+
+    .kinase-card-inner {
+        position: relative;
+        background: var(--secondary-bg);
+        margin: -1.5rem;
+        padding: 1.5rem;
+        border-radius: 14px;
+    }
+
+    .kinase-name {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 0.5rem;
+        font-family: 'JetBrains Mono', monospace;
+    }
+
+    .kinase-family-badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        background: rgba(102, 126, 234, 0.2);
+        color: #667eea;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+    }
+
+    .kinase-metrics {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.75rem;
+        margin-top: 1rem;
+    }
+
+    .kinase-metric {
+        text-align: center;
+        padding: 0.5rem;
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: 8px;
+    }
+
+    .kinase-metric-value {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+
+    .kinase-metric-label {
+        font-size: 0.7rem;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        margin-top: 0.25rem;
+    }
+
+    /* Network Visualization Container */
+    .network-container {
+        background: var(--glass-bg);
+        border-radius: 20px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        border: 1px solid var(--border-color);
+        position: relative;
+        height: 600px;
+    }
+
+    #kinase-network {
+        width: 100%;
+        height: 100%;
+        background: radial-gradient(circle at center, rgba(0, 217, 255, 0.05), transparent);
+    }
+
+    /* Time Series Container */
+    .timeseries-container {
+        background: var(--glass-bg);
+        border-radius: 20px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        border: 1px solid var(--border-color);
+    }
+
+    /* Protein Cards with Kinase Info */
+    .protein-card-enhanced {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 16px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        transition: all 0.3s ease;
+    }
+
+    .protein-card-enhanced:hover {
+        background: rgba(255, 255, 255, 0.05);
+        transform: translateX(8px);
+        border-color: rgba(102, 126, 234, 0.5);
+    }
+
+    .protein-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+
+    .protein-name {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        font-family: 'JetBrains Mono', monospace;
+    }
+
+    .protein-kinases {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        margin-top: 1rem;
+    }
+
+    .protein-kinase-chip {
+        padding: 0.4rem 0.8rem;
+        background: var(--kinase-gradient-1);
+        color: white;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+
+    .protein-kinase-chip:hover {
+        transform: scale(1.1);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    /* Site Visualization */
+    .site-heatmap {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+        gap: 2px;
+        margin-top: 1rem;
+        padding: 1rem;
+        background: rgba(0, 0, 0, 0.3);
+        border-radius: 12px;
+    }
+
+    .site-cell {
+        aspect-ratio: 1;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        position: relative;
+    }
+
+    .site-cell:hover {
+        transform: scale(1.3);
+        z-index: 10;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Loading State */
+    .loading-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 400px;
+        color: var(--text-secondary);
+    }
+
+    .dna-spinner {
+        width: 60px;
+        height: 60px;
+        position: relative;
+        margin-bottom: 2rem;
+    }
+
+    .dna-spinner::before,
+    .dna-spinner::after {
+        content: '';
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        border: 3px solid transparent;
+        border-top-color: var(--accent-blue);
+        animation: spin 1.5s linear infinite;
+    }
+
+    .dna-spinner::after {
+        border-top-color: var(--accent-purple);
+        animation-delay: 0.75s;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    /* Tooltip Styles */
+    .kinase-tooltip {
+        position: absolute;
+        background: var(--secondary-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 1rem;
+        z-index: 1000;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        min-width: 250px;
+    }
+
+    .kinase-tooltip.visible {
+        opacity: 1;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .pathway-title {
+            font-size: 2rem;
+        }
+
+        .metrics-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .kinase-cards-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Loading State -->
+    <div id="loading-state" class="loading-container">
+        <div class="dna-spinner"></div>
+        <h3>Analyzing Kinase Dynamics</h3>
+        <p>Loading pathway phosphoproteome data...</p>
+    </div>
+
+    <!-- Main Analysis Content -->
+    <div id="analysis-content" style="display: none;">
+        <!-- Hero Section -->
+        <div class="pathway-hero">
+            <div class="pathway-collection-badge" id="pathway-collection"></div>
+            <h1 class="pathway-title" id="pathway-title">Pathway Analysis</h1>
+            <p class="pathway-subtitle" id="pathway-description" style="position: relative; z-index: 10; color: var(--text-secondary); font-size: 1.1rem;"></p>
+
+            <!-- Key Metrics -->
+            <div class="metrics-grid" id="key-metrics">
+                <!-- Metrics will be populated here -->
+            </div>
+        </div>
+
+        <!-- Advanced View Tabs -->
+        <div class="view-tabs">
+            <div class="tab-indicator" id="tab-indicator"></div>
+            <button class="view-tab active" data-view="landscape" onclick="switchView('landscape')">
+                <i class="fas fa-mountain"></i> Kinase Landscape
+            </button>
+            <button class="view-tab" data-view="network" onclick="switchView('network')">
+                <i class="fas fa-project-diagram"></i> Network
+            </button>
+            <button class="view-tab" data-view="proteins" onclick="switchView('proteins')">
+                <i class="fas fa-dna"></i> Proteins
+            </button>
+            <button class="view-tab" data-view="sites" onclick="switchView('sites')">
+                <i class="fas fa-dot-circle"></i> Sites
+            </button>
+            <button class="view-tab" data-view="dynamics" onclick="switchView('dynamics')">
+                <i class="fas fa-chart-line"></i> Dynamics
+            </button>
+        </div>
+
+        <!-- View Content -->
+        <div id="view-content">
+            <!-- Kinase Landscape View -->
+            <div class="view-pane" id="landscape-view">
+                <div class="kinase-landscape">
+                    <h2 class="landscape-title">
+                        <i class="fas fa-mountain"></i> Kinase Enrichment Landscape
+                    </h2>
+                    <p style="color: var(--text-secondary); margin-bottom: 2rem;">
+                        Top kinases enriched in this pathway based on integrated scoring across all member proteins
+                    </p>
+
+                    <!-- Kinase Family Distribution -->
+                    <div style="margin-bottom: 2rem;">
+                        <canvas id="family-distribution-chart" height="80"></canvas>
+                    </div>
+
+                    <!-- Top Kinases Grid -->
+                    <div class="kinase-cards-grid" id="kinase-cards">
+                        <!-- Kinase cards will be populated here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Network View -->
+            <div class="view-pane" id="network-view" style="display: none;">
+                <div class="network-container">
+                    <h2 class="landscape-title">
+                        <i class="fas fa-project-diagram"></i> Kinase Co-enrichment Network
+                    </h2>
+                    <p style="color: var(--text-secondary); margin-bottom: 2rem;">
+                        Network showing kinases that target similar proteins within this pathway
+                    </p>
+                    <div id="kinase-network"></div>
+                </div>
+            </div>
+
+            <!-- Proteins View -->
+            <div class="view-pane" id="proteins-view" style="display: none;">
+                <div class="kinase-landscape">
+                    <h2 class="landscape-title">
+                        <i class="fas fa-dna"></i> Protein-Level Kinase Analysis
+                    </h2>
+                    <div id="proteins-list">
+                        <!-- Protein cards will be populated here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sites View -->
+            <div class="view-pane" id="sites-view" style="display: none;">
+                <div class="kinase-landscape">
+                    <h2 class="landscape-title">
+                        <i class="fas fa-dot-circle"></i> Phosphorylation Site Heatmap
+                    </h2>
+                    <div id="sites-heatmap">
+                        <!-- Sites visualization will be populated here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dynamics View -->
+            <div class="view-pane" id="dynamics-view" style="display: none;">
+                <div class="timeseries-container">
+                    <h2 class="landscape-title">
+                        <i class="fas fa-chart-line"></i> Simulated Kinase Dynamics
+                    </h2>
+                    <p style="color: var(--text-secondary); margin-bottom: 2rem;">
+                        Predicted temporal activation patterns of pathway kinases following stimulation
+                    </p>
+                    <canvas id="dynamics-chart" height="100"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Kinase Tooltip -->
+<div class="kinase-tooltip" id="kinase-tooltip"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script>
+class PathwayKinaseAnalysis {
+    constructor(pathwayId) {
+        this.pathwayId = pathwayId;
+        this.data = null;
+        this.currentView = 'landscape';
+        this.charts = {};
+        this.selectedKinase = null;
+
+        this.init();
+    }
+
+    async init() {
+        await this.loadData();
+        this.setupEventListeners();
+        this.render();
+    }
+
+    async loadData() {
+        try {
+            const response = await fetch(`/api/pathway/${this.pathwayId}/analysis_v2`);
+            if (!response.ok) throw new Error('Failed to load pathway data');
+
+            this.data = await response.json();
+            console.log('Pathway data loaded:', this.data);
+        } catch (error) {
+            console.error('Error loading data:', error);
+            this.showError('Failed to load pathway analysis');
+        }
+    }
+
+    setupEventListeners() {
+        // Tab indicator animation
+        const tabs = document.querySelectorAll('.view-tab');
+        tabs.forEach((tab, index) => {
+            tab.addEventListener('click', () => {
+                this.updateTabIndicator(index);
+            });
+        });
+    }
+
+    updateTabIndicator(index) {
+        const indicator = document.getElementById('tab-indicator');
+        const tabWidth = 100 / 5; // 5 tabs
+        indicator.style.width = `${tabWidth}%`;
+        indicator.style.left = `${tabWidth * index}%`;
+    }
+
+    render() {
+        // Hide loading, show content
+        document.getElementById('loading-state').style.display = 'none';
+        document.getElementById('analysis-content').style.display = 'block';
+
+        // Populate header
+        this.renderHeader();
+
+        // Render initial view
+        this.renderView();
+    }
+
+    renderHeader() {
+        const { pathway, stats } = this.data;
+
+        document.getElementById('pathway-title').textContent = pathway.gs_name;
+        document.getElementById('pathway-collection').textContent = pathway.gs_collection;
+        document.getElementById('pathway-description').textContent =
+            pathway.gs_description || 'Comprehensive kinase dynamics analysis';
+
+        // Render key metrics
+        const metricsHtml = `
+            <div class="metric-card">
+                <div class="metric-value">${this.formatNumber(stats.total_genes)}</div>
+                <div class="metric-label">Proteins</div>
+                <div class="metric-trend">↑ Active</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value">${this.formatNumber(stats.total_sites)}</div>
+                <div class="metric-label">Phosphosites</div>
+                <div class="metric-trend">↑ ${((stats.significant_sites/stats.total_sites)*100).toFixed(0)}% Sig</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value">${this.data.enriched_kinases.length}</div>
+                <div class="metric-label">Kinases</div>
+                <div class="metric-trend">Enriched</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value">${(stats.avg_confidence * 100).toFixed(0)}%</div>
+                <div class="metric-label">Avg Confidence</div>
+                <div class="metric-trend">High Quality</div>
+            </div>
+        `;
+
+        document.getElementById('key-metrics').innerHTML = metricsHtml;
+    }
+
+    renderView() {
+        switch(this.currentView) {
+            case 'landscape':
+                this.renderLandscapeView();
+                break;
+            case 'network':
+                this.renderNetworkView();
+                break;
+            case 'proteins':
+                this.renderProteinsView();
+                break;
+            case 'sites':
+                this.renderSitesView();
+                break;
+            case 'dynamics':
+                this.renderDynamicsView();
+                break;
+        }
+    }
+
+    renderLandscapeView() {
+        // Render family distribution chart
+        this.renderFamilyDistribution();
+
+        // Render kinase cards
+        const kinaseCards = document.getElementById('kinase-cards');
+        const topKinases = this.data.enriched_kinases.slice(0, 12);
+
+        kinaseCards.innerHTML = topKinases.map(kinase => {
+            const family = this.getKinaseFamily(kinase.kinase);
+            return `
+                <div class="kinase-card" onclick="pathwayAnalysis.selectKinase('${kinase.kinase}')">
+                    <div class="kinase-card-inner">
+                        <div class="kinase-name">${kinase.kinase}</div>
+                        <div class="kinase-family-badge">${family} Family</div>
+
+                        <div class="kinase-metrics">
+                            <div class="kinase-metric">
+                                <div class="kinase-metric-value">${kinase.score_integrated.toFixed(2)}</div>
+                                <div class="kinase-metric-label">Score</div>
+                            </div>
+                            <div class="kinase-metric">
+                                <div class="kinase-metric-value">#${kinase.rank_integrated}</div>
+                                <div class="kinase-metric-label">Rank</div>
+                            </div>
+                            <div class="kinase-metric">
+                                <div class="kinase-metric-value">${kinase.n_genes_with_kinase}</div>
+                                <div class="kinase-metric-label">Targets</div>
+                            </div>
+                            <div class="kinase-metric">
+                                <div class="kinase-metric-value">${(kinase.gene_coverage * 100).toFixed(0)}%</div>
+                                <div class="kinase-metric-label">Coverage</div>
+                            </div>
+                        </div>
+
+                        <div style="margin-top: 1rem;">
+                            <div style="font-size: 0.8rem; color: var(--text-secondary);">
+                                p-value: ${kinase.fisher_p.toExponential(2)}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    renderFamilyDistribution() {
+        const ctx = document.getElementById('family-distribution-chart').getContext('2d');
+
+        if (this.charts.family) {
+            this.charts.family.destroy();
+        }
+
+        const families = this.data.kinase_families;
+
+        this.charts.family = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: Object.keys(families),
+                datasets: [{
+                    label: 'Average Enrichment Score',
+                    data: Object.values(families).map(f => f.avg_score),
+                    backgroundColor: [
+                        'rgba(102, 126, 234, 0.8)',
+                        'rgba(240, 147, 251, 0.8)',
+                        'rgba(79, 172, 254, 0.8)',
+                        'rgba(67, 233, 123, 0.8)',
+                        'rgba(250, 112, 154, 0.8)',
+                        'rgba(254, 225, 64, 0.8)'
+                    ],
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                plugins: {
+                    legend: { display: false },
+                    title: {
+                        display: true,
+                        text: 'Kinase Family Distribution',
+                        color: '#ffffff',
+                        font: { size: 14 }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                        ticks: { color: '#8b9dc3' }
+                    },
+                    y: {
+                        grid: { display: false },
+                        ticks: { color: '#8b9dc3' }
+                    }
+                }
+            }
+        });
+    }
+
+    renderNetworkView() {
+        const container = d3.select('#kinase-network');
+        container.selectAll('*').remove();
+
+        const width = container.node().getBoundingClientRect().width;
+        const height = 500;
+
+        const svg = container.append('svg')
+            .attr('width', width)
+            .attr('height', height);
+
+        // Create network data
+        const nodes = this.data.enriched_kinases.slice(0, 15).map(k => ({
+            id: k.kinase,
+            score: k.score_integrated,
+            targets: k.n_genes_with_kinase
+        }));
+
+        const links = this.data.kinase_network || [];
+
+        // Create force simulation
+        const simulation = d3.forceSimulation(nodes)
+            .force('link', d3.forceLink(links).id(d => d.id).distance(100))
+            .force('charge', d3.forceManyBody().strength(-300))
+            .force('center', d3.forceCenter(width / 2, height / 2))
+            .force('collision', d3.forceCollide().radius(30));
+
+        // Add links
+        const link = svg.append('g')
+            .selectAll('line')
+            .data(links)
+            .enter().append('line')
+            .style('stroke', 'var(--network-edge)')
+            .style('stroke-width', d => Math.sqrt(d.weight));
+
+        // Add nodes
+        const node = svg.append('g')
+            .selectAll('circle')
+            .data(nodes)
+            .enter().append('circle')
+            .attr('r', d => 10 + Math.sqrt(d.targets))
+            .style('fill', 'var(--network-node)')
+            .style('stroke', '#fff')
+            .style('stroke-width', 2)
+            .call(d3.drag()
+                .on('start', dragstarted)
+                .on('drag', dragged)
+                .on('end', dragended));
+
+        // Add labels
+        const label = svg.append('g')
+            .selectAll('text')
+            .data(nodes)
+            .enter().append('text')
+            .text(d => d.id)
+            .style('fill', '#fff')
+            .style('font-size', '12px')
+            .style('font-family', 'JetBrains Mono')
+            .attr('text-anchor', 'middle')
+            .attr('dy', -15);
+
+        // Update positions
+        simulation.on('tick', () => {
+            link
+                .attr('x1', d => d.source.x)
+                .attr('y1', d => d.source.y)
+                .attr('x2', d => d.target.x)
+                .attr('y2', d => d.target.y);
+
+            node
+                .attr('cx', d => d.x)
+                .attr('cy', d => d.y);
+
+            label
+                .attr('x', d => d.x)
+                .attr('y', d => d.y);
+        });
+
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+    }
+
+    renderProteinsView() {
+        const proteinsList = document.getElementById('proteins-list');
+
+        proteinsList.innerHTML = this.data.proteins.slice(0, 20).map(protein => `
+            <div class="protein-card-enhanced">
+                <div class="protein-header">
+                    <div class="protein-name">${protein.gene_symbol}</div>
+                    <div style="text-align: right;">
+                        <div style="font-size: 0.9rem; color: var(--text-secondary);">
+                            ${protein.total_sites} sites • ${protein.significant_sites} significant
+                        </div>
+                        <div style="font-size: 0.9rem; color: var(--text-secondary);">
+                            Avg confidence: ${(protein.avg_confidence * 100).toFixed(0)}%
+                        </div>
+                    </div>
+                </div>
+
+                <div class="protein-kinases">
+                    ${(protein.top_kinases || []).map(k => `
+                        <div class="protein-kinase-chip">
+                            ${k.kinase}: ${k.enrichment_score.toFixed(1)}
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `).join('');
+    }
+
+    renderSitesView() {
+        const heatmap = document.getElementById('sites-heatmap');
+
+        // Create site heatmap
+        const sites = this.data.sample_sites;
+
+        heatmap.innerHTML = `
+            <div class="site-heatmap">
+                ${sites.map(site => {
+                    const confidence = site.predicted_prob_calibrated || 0;
+                    const color = this.getConfidenceColor(confidence);
+                    return `
+                        <div class="site-cell"
+                             style="background: ${color};"
+                             title="${site.gene_symbol} ${site.residue_type}${site.position} - ${(confidence*100).toFixed(1)}%">
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+            <div style="margin-top: 2rem; text-align: center; color: var(--text-secondary);">
+                <p>Showing ${sites.length} phosphocompetent sites (p≥0.5, q≤0.05)</p>
+                <p>Color intensity indicates prediction confidence</p>
+            </div>
+        `;
+    }
+
+    renderDynamicsView() {
+        const ctx = document.getElementById('dynamics-chart').getContext('2d');
+
+        if (this.charts.dynamics) {
+            this.charts.dynamics.destroy();
+        }
+
+        const timeSeries = this.data.time_series;
+        const datasets = Object.entries(timeSeries.kinases).map(([kinase, values], index) => ({
+            label: kinase,
+            data: values,
+            borderColor: this.getKinaseColor(index),
+            backgroundColor: this.getKinaseColor(index, 0.2),
+            tension: 0.4,
+            fill: false
+        }));
+
+        this.charts.dynamics = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: timeSeries.timepoints.map(t => `${t} min`),
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: { color: '#8b9dc3' }
+                    },
+                    title: {
+                        display: true,
+                        text: 'Simulated Kinase Activity Over Time',
+                        color: '#ffffff',
+                        font: { size: 14 }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                        ticks: { color: '#8b9dc3' }
+                    },
+                    y: {
+                        grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                        ticks: { color: '#8b9dc3' },
+                        title: {
+                            display: true,
+                            text: 'Activity Score',
+                            color: '#8b9dc3'
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    selectKinase(kinaseName) {
+        this.selectedKinase = kinaseName;
+        // Could show detailed kinase information in a modal or side panel
+        console.log('Selected kinase:', kinaseName);
+    }
+
+    getKinaseFamily(kinaseName) {
+        const families = {
+            'AGC': ['AKT1', 'AKT2', 'AKT3', 'PKA', 'PKG1', 'PKG2', 'ROCK1', 'ROCK2', 'SGK1', 'SGK3'],
+            'CAMK': ['CAMK1A', 'CAMK2A', 'CAMK2B', 'CAMK2D', 'CAMK4', 'MARK1', 'MARK2'],
+            'CMGC': ['CDK1', 'CDK2', 'CDK4', 'CDK5', 'GSK3A', 'GSK3B', 'ERK1', 'ERK2', 'JNK1', 'P38A'],
+            'CK1': ['CK1A', 'CK1D', 'CK1E'],
+            'STE': ['MEK1', 'MEK2', 'PAK1', 'PAK2'],
+            'TKL': ['BRAF', 'RAF1', 'RIPK1', 'RIPK2']
+        };
+
+        for (const [family, members] of Object.entries(families)) {
+            if (members.includes(kinaseName)) return family;
+        }
+        return 'Other';
+    }
+
+    getConfidenceColor(confidence) {
+        const colors = [
+            { threshold: 0.9, color: 'rgba(16, 185, 129, 0.9)' },
+            { threshold: 0.7, color: 'rgba(59, 130, 246, 0.9)' },
+            { threshold: 0.5, color: 'rgba(245, 158, 11, 0.9)' },
+            { threshold: 0, color: 'rgba(239, 68, 68, 0.9)' }
+        ];
+
+        for (const { threshold, color } of colors) {
+            if (confidence >= threshold) return color;
+        }
+        return colors[colors.length - 1].color;
+    }
+
+    getKinaseColor(index, alpha = 1) {
+        const colors = [
+            `rgba(102, 126, 234, ${alpha})`,
+            `rgba(240, 147, 251, ${alpha})`,
+            `rgba(79, 172, 254, ${alpha})`,
+            `rgba(67, 233, 123, ${alpha})`,
+            `rgba(250, 112, 154, ${alpha})`
+        ];
+        return colors[index % colors.length];
+    }
+
+    formatNumber(num) {
+        return new Intl.NumberFormat().format(num);
+    }
+
+    showError(message) {
+        document.getElementById('loading-state').innerHTML = `
+            <div style="color: var(--accent-pink);">
+                <i class="fas fa-exclamation-triangle" style="font-size: 3rem; margin-bottom: 1rem;"></i>
+                <h3>Analysis Error</h3>
+                <p>${message}</p>
+            </div>
+        `;
+    }
+}
+
+// Global functions for onclick handlers
+function switchView(viewName) {
+    // Update active tab
+    document.querySelectorAll('.view-tab').forEach(tab => {
+        tab.classList.remove('active');
+        if (tab.dataset.view === viewName) {
+            tab.classList.add('active');
+        }
+    });
+
+    // Hide all views
+    document.querySelectorAll('.view-pane').forEach(pane => {
+        pane.style.display = 'none';
+    });
+
+    // Show selected view
+    document.getElementById(`${viewName}-view`).style.display = 'block';
+
+    // Update current view and render
+    if (window.pathwayAnalysis) {
+        window.pathwayAnalysis.currentView = viewName;
+        window.pathwayAnalysis.renderView();
+    }
+}
+
+// Initialize analysis when page loads
+let pathwayAnalysis;
+document.addEventListener('DOMContentLoaded', () => {
+    const pathParts = window.location.pathname.split('/');
+    const pathwayId = pathParts[2];
+
+    if (pathwayId && !isNaN(pathwayId)) {
+        window.pathwayAnalysis = new PathwayKinaseAnalysis(parseInt(pathwayId));
+
+        // Initialize tab indicator
+        const indicator = document.getElementById('tab-indicator');
+        indicator.style.width = '20%';
+        indicator.style.left = '0%';
+    }
+});
+</script>
+{% endblock %}

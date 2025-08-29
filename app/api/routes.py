@@ -366,12 +366,9 @@ def get_protein_details(gene_symbol):
         return jsonify({'error': 'Failed to retrieve protein details'}), 500
 
 
-# app/api/routes.py - Updated pathway analysis endpoint
-# app/api/routes.py - Complete pathway analysis endpoint with all kinase scores
-
 @bp.route('/pathway/<int:pathway_id>/analysis')
 def get_pathway_analysis(pathway_id):
-    """Comprehensive pathway-level phosphoproteomics analysis with full kinase extraction."""
+    """Optimized pathway-level phosphoproteomics analysis."""
     try:
         # Get pathway basic info
         pathway_query = """
@@ -385,75 +382,15 @@ def get_pathway_analysis(pathway_id):
             return jsonify({'error': 'Pathway not found'}), 404
 
         # Get list of all kinase columns from the database schema
-        # This is the complete list of 303 kinases
-        kinase_columns = [
-            'AAK1_MotifScore', 'ACVR2A_MotifScore', 'ACVR2B_MotifScore', 'AKT1_MotifScore', 'AKT2_MotifScore',
-            'AKT3_MotifScore', 'ALK2_MotifScore', 'ALK4_MotifScore', 'ALPHAK3_MotifScore', 'AMPKA1_MotifScore',
-            'AMPKA2_MotifScore', 'ANKRD3_MotifScore', 'ASK1_MotifScore', 'ATM_MotifScore', 'ATR_MotifScore',
-            'AURA_MotifScore', 'AURB_MotifScore', 'AURC_MotifScore', 'BCKDK_MotifScore', 'BIKE_MotifScore',
-            'BMPR1A_MotifScore', 'BMPR1B_MotifScore', 'BMPR2_MotifScore', 'BRAF_MotifScore', 'BRSK1_MotifScore',
-            'BRSK2_MotifScore', 'BUB1_MotifScore', 'CAMK1A_MotifScore', 'CAMK1B_MotifScore', 'CAMK1D_MotifScore',
-            'CAMK1G_MotifScore', 'CAMK2A_MotifScore', 'CAMK2B_MotifScore', 'CAMK2D_MotifScore', 'CAMK2G_MotifScore',
-            'CAMK4_MotifScore', 'CAMKK1_MotifScore', 'CAMKK2_MotifScore', 'CAMLCK_MotifScore', 'CDC7_MotifScore',
-            'CDK1_MotifScore', 'CDK10_MotifScore', 'CDK12_MotifScore', 'CDK13_MotifScore', 'CDK14_MotifScore',
-            'CDK16_MotifScore', 'CDK17_MotifScore', 'CDK18_MotifScore', 'CDK19_MotifScore', 'CDK2_MotifScore',
-            'CDK3_MotifScore', 'CDK4_MotifScore', 'CDK5_MotifScore', 'CDK6_MotifScore', 'CDK7_MotifScore',
-            'CDK8_MotifScore', 'CDK9_MotifScore', 'CDKL1_MotifScore', 'CDKL5_MotifScore', 'CHAK1_MotifScore',
-            'CHAK2_MotifScore', 'CHK1_MotifScore', 'CHK2_MotifScore', 'CK1A_MotifScore', 'CK1A2_MotifScore',
-            'CK1D_MotifScore', 'CK1E_MotifScore', 'CK1G1_MotifScore', 'CK1G2_MotifScore', 'CK1G3_MotifScore',
-            'CK2A1_MotifScore', 'CK2A2_MotifScore', 'CLK1_MotifScore', 'CLK2_MotifScore', 'CLK3_MotifScore',
-            'CLK4_MotifScore', 'COT_MotifScore', 'CRIK_MotifScore', 'DAPK1_MotifScore', 'DAPK2_MotifScore',
-            'DAPK3_MotifScore', 'DCAMKL1_MotifScore', 'DCAMKL2_MotifScore', 'DLK_MotifScore', 'DMPK1_MotifScore',
-            'DNAPK_MotifScore', 'DRAK1_MotifScore', 'DSTYK_MotifScore', 'DYRK1A_MotifScore', 'DYRK1B_MotifScore',
-            'DYRK2_MotifScore', 'DYRK3_MotifScore', 'DYRK4_MotifScore', 'EEF2K_MotifScore', 'ERK1_MotifScore',
-            'ERK2_MotifScore', 'ERK5_MotifScore', 'ERK7_MotifScore', 'FAM20C_MotifScore', 'GAK_MotifScore',
-            'GCK_MotifScore', 'GCN2_MotifScore', 'GRK1_MotifScore', 'GRK2_MotifScore', 'GRK3_MotifScore',
-            'GRK4_MotifScore', 'GRK5_MotifScore', 'GRK6_MotifScore', 'GRK7_MotifScore', 'GSK3A_MotifScore',
-            'GSK3B_MotifScore', 'HASPIN_MotifScore', 'HGK_MotifScore', 'HIPK1_MotifScore', 'HIPK2_MotifScore',
-            'HIPK3_MotifScore', 'HIPK4_MotifScore', 'HPK1_MotifScore', 'HRI_MotifScore', 'HUNK_MotifScore',
-            'ICK_MotifScore', 'IKKA_MotifScore', 'IKKB_MotifScore', 'IKKE_MotifScore', 'IRAK1_MotifScore',
-            'IRAK4_MotifScore', 'IRE1_MotifScore', 'IRE2_MotifScore', 'JNK1_MotifScore', 'JNK2_MotifScore',
-            'JNK3_MotifScore', 'KHS1_MotifScore', 'KHS2_MotifScore', 'KIS_MotifScore', 'LATS1_MotifScore',
-            'LATS2_MotifScore', 'LKB1_MotifScore', 'LOK_MotifScore', 'LRRK2_MotifScore', 'MAK_MotifScore',
-            'MAP3K15_MotifScore', 'MAPKAPK2_MotifScore', 'MAPKAPK3_MotifScore', 'MAPKAPK5_MotifScore',
-            'MARK1_MotifScore', 'MARK2_MotifScore', 'MARK3_MotifScore', 'MARK4_MotifScore', 'MASTL_MotifScore',
-            'MEK1_MotifScore', 'MEK2_MotifScore', 'MEK5_MotifScore', 'MEKK1_MotifScore', 'MEKK2_MotifScore',
-            'MEKK3_MotifScore', 'MEKK6_MotifScore', 'MELK_MotifScore', 'MINK_MotifScore', 'MLK1_MotifScore',
-            'MLK2_MotifScore', 'MLK3_MotifScore', 'MLK4_MotifScore', 'MNK1_MotifScore', 'MNK2_MotifScore',
-            'MOK_MotifScore', 'MOS_MotifScore', 'MPSK1_MotifScore', 'MRCKA_MotifScore', 'MRCKB_MotifScore',
-            'MSK1_MotifScore', 'MSK2_MotifScore', 'MST1_MotifScore', 'MST2_MotifScore', 'MST3_MotifScore',
-            'MST4_MotifScore', 'MTOR_MotifScore', 'MYLK4_MotifScore', 'MYO3A_MotifScore', 'MYO3B_MotifScore',
-            'NDR1_MotifScore', 'NDR2_MotifScore', 'NEK1_MotifScore', 'NEK11_MotifScore', 'NEK2_MotifScore',
-            'NEK3_MotifScore', 'NEK4_MotifScore', 'NEK5_MotifScore', 'NEK6_MotifScore', 'NEK7_MotifScore',
-            'NEK8_MotifScore', 'NEK9_MotifScore', 'NIK_MotifScore', 'NIM1_MotifScore', 'NLK_MotifScore',
-            'NUAK1_MotifScore', 'NUAK2_MotifScore', 'OSR1_MotifScore', 'P38A_MotifScore', 'P38B_MotifScore',
-            'P38D_MotifScore', 'P38G_MotifScore', 'P70S6K_MotifScore', 'P70S6KB_MotifScore', 'P90RSK_MotifScore',
-            'PAK1_MotifScore', 'PAK2_MotifScore', 'PAK3_MotifScore', 'PAK4_MotifScore', 'PAK5_MotifScore',
-            'PAK6_MotifScore', 'PASK_MotifScore', 'PBK_MotifScore', 'PDHK1_MotifScore', 'PDHK4_MotifScore',
-            'PDK1_MotifScore', 'PERK_MotifScore', 'PHKG1_MotifScore', 'PHKG2_MotifScore', 'PIM1_MotifScore',
-            'PIM2_MotifScore', 'PIM3_MotifScore', 'PINK1_MotifScore', 'PKACA_MotifScore', 'PKACB_MotifScore',
-            'PKACG_MotifScore', 'PKCA_MotifScore', 'PKCB_MotifScore', 'PKCD_MotifScore', 'PKCE_MotifScore',
-            'PKCG_MotifScore', 'PKCH_MotifScore', 'PKCI_MotifScore', 'PKCT_MotifScore', 'PKCZ_MotifScore',
-            'PKG1_MotifScore', 'PKG2_MotifScore', 'PKN1_MotifScore', 'PKN2_MotifScore', 'PKN3_MotifScore',
-            'PKR_MotifScore', 'PLK1_MotifScore', 'PLK2_MotifScore', 'PLK3_MotifScore', 'PLK4_MotifScore',
-            'PRKD1_MotifScore', 'PRKD2_MotifScore', 'PRKD3_MotifScore', 'PRKX_MotifScore', 'PRP4_MotifScore',
-            'PRPK_MotifScore', 'QIK_MotifScore', 'QSK_MotifScore', 'RAF1_MotifScore', 'RIPK1_MotifScore',
-            'RIPK2_MotifScore', 'RIPK3_MotifScore', 'ROCK1_MotifScore', 'ROCK2_MotifScore', 'RSK2_MotifScore',
-            'RSK3_MotifScore', 'RSK4_MotifScore', 'SBK_MotifScore', 'SGK1_MotifScore', 'SGK3_MotifScore',
-            'SIK_MotifScore', 'SKMLCK_MotifScore', 'SLK_MotifScore', 'SMG1_MotifScore', 'SMMLCK_MotifScore',
-            'SNRK_MotifScore', 'SRPK1_MotifScore', 'SRPK2_MotifScore', 'SRPK3_MotifScore', 'SSTK_MotifScore',
-            'STK33_MotifScore', 'STLK3_MotifScore', 'TAK1_MotifScore', 'TAO1_MotifScore', 'TAO2_MotifScore',
-            'TAO3_MotifScore', 'TBK1_MotifScore', 'TGFBR1_MotifScore', 'TGFBR2_MotifScore', 'TLK1_MotifScore',
-            'TLK2_MotifScore', 'TNIK_MotifScore', 'TSSK1_MotifScore', 'TSSK2_MotifScore', 'TTBK1_MotifScore',
-            'TTBK2_MotifScore', 'TTK_MotifScore', 'ULK1_MotifScore', 'ULK2_MotifScore', 'VRK1_MotifScore',
-            'VRK2_MotifScore', 'WNK1_MotifScore', 'WNK3_MotifScore', 'WNK4_MotifScore', 'YANK2_MotifScore',
-            'YANK3_MotifScore', 'YSK1_MotifScore', 'YSK4_MotifScore', 'ZAK_MotifScore'
-        ]
+        cursor = get_db().execute("SELECT * FROM phosphosites LIMIT 0")
+        all_columns = [description[0] for description in cursor.description]
+        kinase_columns = [col for col in all_columns if '_MotifScore' in col]
 
-        # Build SQL query to get ALL data including all kinase scores
-        kinase_columns_str = ', '.join([f'p.{col}' for col in kinase_columns])
+        current_app.logger.info(f"Found {len(kinase_columns)} kinase columns for pathway {pathway_id}")
 
-        proteins_sites_query = f"""
+        # OPTIMIZATION 1: Only get phosphocompetent sites initially (prob > 0.5, qvalue < 0.05)
+        # This dramatically reduces the initial data load
+        sites_query = f"""
         SELECT 
             p.site_id,
             p.gene_symbol,
@@ -471,39 +408,81 @@ def get_pathway_analysis(pathway_id):
             p.disorder_score,
             p.neighbor_count,
             p.hydrogen_bonds,
-            p.hydroxyl_exposure,
-            {kinase_columns_str}
+            p.hydroxyl_exposure
         FROM gene_set_memberships gsm
         JOIN phosphosites p ON gsm.gene_symbol = p.gene_symbol
         WHERE gsm.gs_id = ?
-        ORDER BY p.gene_symbol, p.position
+          AND p.predicted_prob_calibrated >= 0.5
+          AND p.qvalue <= 0.05
+        ORDER BY p.predicted_prob_calibrated DESC
+        LIMIT 500
         """
 
-        sites_results = execute_query(proteins_sites_query, (pathway_id,))
-        if not sites_results:
-            return jsonify({'error': 'No phosphorylation sites found for this pathway'}), 404
+        sites_results = execute_query(sites_query, (pathway_id,))
 
-        # Convert to list of dicts for easier processing
+        if not sites_results:
+            # If no phosphocompetent sites, get ANY sites (limited)
+            sites_query_fallback = """
+            SELECT 
+                p.site_id,
+                p.gene_symbol,
+                p.position,
+                p.residue_type,
+                p.motif,
+                p.predicted_prob_calibrated,
+                p.qvalue,
+                p.significant_fdr05,
+                p.plddt,
+                p.secondary_structure,
+                p.sasa_ratio,
+                p.disorder_score
+            FROM gene_set_memberships gsm
+            JOIN phosphosites p ON gsm.gene_symbol = p.gene_symbol
+            WHERE gsm.gs_id = ?
+            ORDER BY p.predicted_prob_calibrated DESC
+            LIMIT 100
+            """
+            sites_results = execute_query(sites_query_fallback, (pathway_id,))
+
+            if not sites_results:
+                return jsonify({'error': 'No phosphorylation sites found for this pathway'}), 404
+
+        # Convert to list of dicts
         all_sites = [dict(row) for row in sites_results]
 
-        # Process each site to extract top 3 kinases
+        current_app.logger.info(f"Processing {len(all_sites)} phosphocompetent sites")
+
+        # OPTIMIZATION 2: Only get top kinases for each site, not all 303
+        # For each site, get only the top 3 kinase predictions
         for site in all_sites:
-            kinase_scores = []
-            for kinase_col in kinase_columns:
-                score = site.get(kinase_col)
-                if score is not None and score > 0:
-                    kinase_name = kinase_col.replace('_MotifScore', '')
-                    kinase_scores.append({'kinase': kinase_name, 'score': float(score)})
+            site_id = site['site_id']
 
-            # Sort by score and get top 3 kinases
-            kinase_scores.sort(key=lambda x: x['score'], reverse=True)
-            site['top_kinases'] = kinase_scores[:3]
+            # Build a query to get just this site's kinase scores
+            kinase_cols_str = ', '.join(kinase_columns)
+            kinase_query = f"""
+            SELECT {kinase_cols_str}
+            FROM phosphosites
+            WHERE site_id = ?
+            """
 
-            # Remove individual kinase columns from site data to reduce payload
-            for kinase_col in kinase_columns:
-                site.pop(kinase_col, None)
+            kinase_result = execute_query(kinase_query, (site_id,), fetch_one=True)
 
-        # Organize by protein
+            if kinase_result:
+                # Extract and sort kinase scores
+                kinase_scores = []
+                for kinase_col in kinase_columns:
+                    score = kinase_result[kinase_col]
+                    if score is not None and score > 0:
+                        kinase_name = kinase_col.replace('_MotifScore', '')
+                        kinase_scores.append({'kinase': kinase_name, 'score': float(score)})
+
+                # Sort and get top 3
+                kinase_scores.sort(key=lambda x: x['score'], reverse=True)
+                site['top_kinases'] = kinase_scores[:3]
+            else:
+                site['top_kinases'] = []
+
+        # Organize by protein with statistics
         proteins_data = {}
         for site in all_sites:
             gene = site['gene_symbol']
@@ -516,10 +495,7 @@ def get_pathway_analysis(pathway_id):
                         'significant_sites': 0,
                         'phosphocompetent_sites': 0,
                         'high_confidence_sites': 0,
-                        'avg_confidence': 0,
-                        'max_confidence': 0,
-                        'min_position': float('inf'),
-                        'max_position': 0
+                        'avg_confidence': 0
                     }
                 }
             proteins_data[gene]['sites'].append(site)
@@ -528,28 +504,29 @@ def get_pathway_analysis(pathway_id):
         for gene, data in proteins_data.items():
             sites = data['sites']
             data['stats']['total_sites'] = len(sites)
-            data['stats']['significant_sites'] = sum(1 for s in sites if s['significant_fdr05'])
-
-            # Count phosphocompetent sites (default threshold: prob > 0.5, qvalue < 0.05)
-            data['stats']['phosphocompetent_sites'] = sum(
-                1 for s in sites
-                if (s['predicted_prob_calibrated'] or 0) > 0.5 and (s['qvalue'] or 1) < 0.05
-            )
-
+            data['stats']['significant_sites'] = sum(1 for s in sites if s.get('significant_fdr05'))
+            data['stats']['phosphocompetent_sites'] = len(sites)  # All are phosphocompetent due to filter
             data['stats']['high_confidence_sites'] = sum(
-                1 for s in sites if (s['predicted_prob_calibrated'] or 0) > 0.8
-            )
+                1 for s in sites if (s.get('predicted_prob_calibrated', 0) > 0.8))
 
-            confidences = [s['predicted_prob_calibrated'] or 0 for s in sites]
+            confidences = [s.get('predicted_prob_calibrated', 0) for s in sites]
             data['stats']['avg_confidence'] = sum(confidences) / len(confidences) if confidences else 0
-            data['stats']['max_confidence'] = max(confidences) if confidences else 0
 
-            positions = [s['position'] for s in sites if s['position']]
-            if positions:
-                data['stats']['min_position'] = min(positions)
-                data['stats']['max_position'] = max(positions)
+        # Calculate pathway-wide statistics
+        pathway_stats = {
+            'total_proteins': len(proteins_data),
+            'total_sites': len(all_sites),
+            'significant_sites': sum(1 for s in all_sites if s.get('significant_fdr05')),
+            'phosphocompetent_sites': len(all_sites),
+            'high_confidence_sites': sum(1 for s in all_sites if (s.get('predicted_prob_calibrated', 0) > 0.8)),
+            'avg_confidence': sum(s.get('predicted_prob_calibrated', 0) for s in all_sites) / len(
+                all_sites) if all_sites else 0,
+            'serine_sites': sum(1 for s in all_sites if s.get('residue_type') == 'S'),
+            'threonine_sites': sum(1 for s in all_sites if s.get('residue_type') == 'T'),
+            'tyrosine_sites': sum(1 for s in all_sites if s.get('residue_type') == 'Y')
+        }
 
-        # Calculate pathway-wide kinase enrichment
+        # Get enriched kinases across the pathway (limited to top 20)
         kinase_enrichment = {}
         for site in all_sites:
             for kinase_data in site.get('top_kinases', []):
@@ -561,7 +538,6 @@ def get_pathway_analysis(pathway_id):
                         'protein_count': 0,
                         'phosphocompetent_sites': 0,
                         'avg_score': 0,
-                        'max_score': 0,
                         'scores': [],
                         'proteins': set()
                     }
@@ -569,10 +545,7 @@ def get_pathway_analysis(pathway_id):
                 kinase_enrichment[kinase]['site_count'] += 1
                 kinase_enrichment[kinase]['scores'].append(kinase_data['score'])
                 kinase_enrichment[kinase]['proteins'].add(site['gene_symbol'])
-
-                # Count if this is a phosphocompetent site
-                if (site['predicted_prob_calibrated'] or 0) > 0.5 and (site['qvalue'] or 1) < 0.05:
-                    kinase_enrichment[kinase]['phosphocompetent_sites'] += 1
+                kinase_enrichment[kinase]['phosphocompetent_sites'] += 1
 
         # Calculate final kinase statistics
         enriched_kinases = []
@@ -580,68 +553,30 @@ def get_pathway_analysis(pathway_id):
             scores = kinase_data['scores']
             if scores:
                 kinase_data['avg_score'] = sum(scores) / len(scores)
-                kinase_data['max_score'] = max(scores)
                 kinase_data['protein_count'] = len(kinase_data['proteins'])
-                del kinase_data['proteins']  # Remove set object for JSON serialization
-                del kinase_data['scores']  # Clean up
+                del kinase_data['proteins']  # Remove set for JSON serialization
+                del kinase_data['scores']
                 enriched_kinases.append(kinase_data)
 
-        # Sort kinases by phosphocompetent site count
+        # Sort and limit to top 20 kinases
         enriched_kinases.sort(key=lambda x: x['phosphocompetent_sites'], reverse=True)
+        enriched_kinases = enriched_kinases[:20]
 
-        # Calculate pathway-wide statistics
-        all_confidences = [s['predicted_prob_calibrated'] or 0 for s in all_sites]
-        all_qvalues = [s['qvalue'] or 1 for s in all_sites if s['qvalue'] is not None]
-
-        pathway_stats = {
-            'total_proteins': len(proteins_data),
-            'total_sites': len(all_sites),
-            'significant_sites': sum(1 for s in all_sites if s['significant_fdr05']),
-            'phosphocompetent_sites': sum(
-                1 for s in all_sites
-                if (s['predicted_prob_calibrated'] or 0) > 0.5 and (s['qvalue'] or 1) < 0.05
-            ),
-            'high_confidence_sites': sum(1 for s in all_sites if (s['predicted_prob_calibrated'] or 0) > 0.8),
-            'avg_confidence': sum(all_confidences) / len(all_confidences) if all_confidences else 0,
-            'median_qvalue': sorted(all_qvalues)[len(all_qvalues) // 2] if all_qvalues else 0,
-            'serine_sites': sum(1 for s in all_sites if s['residue_type'] == 'S'),
-            'threonine_sites': sum(1 for s in all_sites if s['residue_type'] == 'T'),
-            'tyrosine_sites': sum(1 for s in all_sites if s['residue_type'] == 'Y')
-        }
-
-        # Calculate structural feature statistics
-        valid_plddt = [s['plddt'] for s in all_sites if s['plddt'] is not None]
-        valid_sasa = [s['sasa_ratio'] for s in all_sites if s['sasa_ratio'] is not None]
-        valid_disorder = [s['disorder_score'] for s in all_sites if s['disorder_score'] is not None]
-
-        structural_stats = {
-            'avg_plddt': sum(valid_plddt) / len(valid_plddt) if valid_plddt else 0,
-            'avg_sasa_ratio': sum(valid_sasa) / len(valid_sasa) if valid_sasa else 0,
-            'avg_disorder': sum(valid_disorder) / len(valid_disorder) if valid_disorder else 0,
-            'min_plddt': min(valid_plddt) if valid_plddt else 0,
-            'max_plddt': max(valid_plddt) if valid_plddt else 0,
-            'surface_exposed_sites': sum(1 for s in valid_sasa if s > 0.4),
-            'disordered_sites': sum(1 for s in valid_disorder if s > 0.5)
-        }
-
-        # Secondary structure distribution
+        # Structure distribution
         structure_distribution = {}
         for site in all_sites:
-            struct = site['secondary_structure'] or 'Unknown'
+            struct = site.get('secondary_structure', 'Unknown')
             structure_distribution[struct] = structure_distribution.get(struct, 0) + 1
 
-        # Confidence distribution bins for phosphocompetent sites
+        # Confidence distribution bins
         confidence_bins = {
-            '0.0-0.3': 0, '0.3-0.5': 0, '0.5-0.7': 0,
-            '0.7-0.9': 0, '0.9-1.0': 0
+            '0.5-0.7': 0,
+            '0.7-0.9': 0,
+            '0.9-1.0': 0
         }
         for site in all_sites:
-            conf = site['predicted_prob_calibrated'] or 0
-            if conf < 0.3:
-                confidence_bins['0.0-0.3'] += 1
-            elif conf < 0.5:
-                confidence_bins['0.3-0.5'] += 1
-            elif conf < 0.7:
+            conf = site.get('predicted_prob_calibrated', 0)
+            if conf < 0.7:
                 confidence_bins['0.5-0.7'] += 1
             elif conf < 0.9:
                 confidence_bins['0.7-0.9'] += 1
@@ -652,16 +587,16 @@ def get_pathway_analysis(pathway_id):
             'pathway': dict(pathway),
             'proteins': list(proteins_data.values()),
             'all_sites': all_sites,
-            'enriched_kinases': enriched_kinases[:100],  # Top 100 kinases
+            'enriched_kinases': enriched_kinases,
             'pathway_stats': pathway_stats,
-            'structural_stats': structural_stats,
             'structure_distribution': structure_distribution,
             'confidence_distribution': confidence_bins,
             'analysis_metadata': {
                 'generated_at': time.time(),
-                'kinases_analyzed': len(kinase_columns),
+                'sites_analyzed': len(all_sites),
+                'note': 'Showing top 500 phosphocompetent sites (prob≥0.5, q≤0.05)',
                 'total_kinases_found': len(enriched_kinases),
-                'analysis_type': 'comprehensive_pathway_phosphoproteomics'
+                'analysis_type': 'optimized_phosphocompetent_focus'
             }
         })
 

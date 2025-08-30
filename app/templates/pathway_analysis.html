@@ -785,6 +785,103 @@
     .target-table tr:hover {
         background: rgba(255, 255, 255, 0.03);
     }
+
+    /* Pathway Summary Sidebar Styles */
+    .detail-panel {
+        position: fixed;
+        top: 0;
+        right: -500px;
+        width: 500px;
+        height: 100vh;
+        background: var(--secondary-bg);
+        border-left: 1px solid var(--border-color);
+        backdrop-filter: blur(20px);
+        z-index: 2000;
+        transition: var(--transition-smooth);
+        overflow-y: auto;
+    }
+
+    .detail-panel.active {
+        right: 0;
+        box-shadow: -10px 0 30px rgba(0, 0, 0, 0.3);
+    }
+
+    .detail-header {
+        padding: 2rem;
+        border-bottom: 1px solid var(--border-color);
+        position: sticky;
+        top: 0;
+        background: var(--secondary-bg);
+        backdrop-filter: blur(20px);
+    }
+
+    .detail-close {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        background: none;
+        border: none;
+        color: var(--text-secondary);
+        font-size: 1.5rem;
+        cursor: pointer;
+        padding: 0.5rem;
+        border-radius: 8px;
+        transition: var(--transition-smooth);
+    }
+
+    .detail-close:hover {
+        color: var(--text-primary);
+        background: rgba(255, 255, 255, 0.1);
+    }
+
+    .detail-content {
+        padding: 0 2rem 2rem;
+    }
+
+    .detail-section {
+        margin-bottom: 2rem;
+    }
+
+    .detail-section h3 {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        color: var(--text-primary);
+        border-bottom: 1px solid var(--border-color);
+        padding-bottom: 0.5rem;
+    }
+
+    .protein-list {
+        max-height: 300px;
+        overflow-y: auto;
+    }
+
+    .protein-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem;
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: 8px;
+        margin-bottom: 0.5rem;
+        transition: var(--transition-smooth);
+        cursor: pointer;
+    }
+
+    .protein-item:hover {
+        background: rgba(255, 255, 255, 0.08);
+        transform: translateX(4px);
+    }
+
+    .protein-name {
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+
+    .protein-sites {
+        color: var(--text-secondary);
+        font-size: 0.875rem;
+    }
 </style>
 {% endblock %}
 
@@ -840,7 +937,12 @@
                         Top kinases enriched in this pathway based on integrated scoring across all member proteins
                     </p>
 
-
+                    <!-- Add Show Pathway Summary button -->
+                    <div style="text-align: right; margin-bottom: 1rem;">
+                        <button class="btn btn-secondary" id="show-pathway-summary">
+                            <i class="fas fa-info-circle"></i> Show Pathway Summary
+                        </button>
+                    </div>
 
                     <!-- Top Kinases Grid -->
                     <div class="kinase-cards-grid" id="kinase-cards">
@@ -919,6 +1021,49 @@
             </div>
         </div>
     </div>
+
+    <!-- Pathway Summary Sidebar -->
+    <div class="detail-panel" id="pathway-summary-panel">
+        <div class="detail-header">
+            <button class="detail-close" id="pathway-summary-close">
+                <i class="fas fa-times"></i>
+            </button>
+            <h2 id="pathway-summary-title">Pathway Details</h2>
+            <div id="pathway-summary-collection" class="pathway-collection" style="margin-top: 0.5rem;"></div>
+        </div>
+
+        <div class="detail-content">
+            <div class="detail-section">
+                <h3>Description</h3>
+                <p id="pathway-summary-description"></p>
+            </div>
+
+            <div class="detail-section">
+                <h3>Statistics</h3>
+                <div class="pathway-stats" id="pathway-summary-stats">
+                    <!-- Stats will be populated here -->
+                </div>
+            </div>
+
+            <div class="detail-section">
+                <h3>Associated Proteins</h3>
+                <div class="protein-list" id="pathway-summary-proteins">
+                    <!-- Protein list will be populated here -->
+                </div>
+            </div>
+
+            <div class="detail-section">
+                <div class="pathway-actions">
+                    <button class="btn btn-primary" id="pathway-summary-export">
+                        <i class="fas fa-download"></i> Export Data
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar Overlay -->
+    <div class="overlay" id="pathway-summary-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 1999; opacity: 0; visibility: hidden; transition: all 0.3s ease;"></div>
 </div>
 
 <!-- Enhanced Tooltip -->
@@ -1771,6 +1916,126 @@ function toggleNodeLabels() {
         label.style.opacity = currentOpacity === '0' ? '1' : '0';
     });
 }
+
+// Pathway Summary Sidebar functionality
+document.addEventListener('DOMContentLoaded', function() {
+    // Get elements
+    const showSummaryBtn = document.getElementById('show-pathway-summary');
+    const summaryPanel = document.getElementById('pathway-summary-panel');
+    const summaryClose = document.getElementById('pathway-summary-close');
+    const summaryOverlay = document.getElementById('pathway-summary-overlay');
+
+    // Add event listeners
+    showSummaryBtn.addEventListener('click', showPathwaySummary);
+    summaryClose.addEventListener('click', hidePathwaySummary);
+    summaryOverlay.addEventListener('click', hidePathwaySummary);
+
+    // Get current pathway ID from URL
+    function getPathwayId() {
+        const pathParts = window.location.pathname.split('/');
+        return parseInt(pathParts[2]); // Get ID from /pathway/[ID]/analysis
+    }
+
+    // Show pathway summary sidebar
+    function showPathwaySummary() {
+        const pathwayId = getPathwayId();
+
+        if (isNaN(pathwayId)) {
+            console.error("Invalid pathway ID");
+            return;
+        }
+
+        // Show loading state
+        summaryPanel.classList.add('active');
+        summaryOverlay.style.opacity = '1';
+        summaryOverlay.style.visibility = 'visible';
+        document.body.style.overflow = 'hidden';
+
+        document.getElementById('pathway-summary-title').textContent = 'Loading...';
+        document.getElementById('pathway-summary-collection').textContent = '';
+        document.getElementById('pathway-summary-description').textContent = '';
+        document.getElementById('pathway-summary-stats').innerHTML = '<div class="loading-spinner"></div>';
+        document.getElementById('pathway-summary-proteins').innerHTML = '<div class="loading-spinner"></div>';
+
+        // Fetch pathway details
+        fetch(`/api/pathway/${pathwayId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data && data.pathway) {
+                    populatePathwaySummary(data);
+                } else {
+                    document.getElementById('pathway-summary-title').textContent = 'Error loading pathway';
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching pathway details:', error);
+                document.getElementById('pathway-summary-title').textContent = 'Error loading pathway';
+            });
+    }
+
+    // Populate pathway summary with data
+    function populatePathwaySummary(data) {
+        const { pathway, proteins, stats } = data;
+
+        // Basic info
+        document.getElementById('pathway-summary-title').textContent = pathway.gs_name;
+        document.getElementById('pathway-summary-collection').textContent = pathway.gs_collection;
+        document.getElementById('pathway-summary-description').textContent =
+            pathway.gs_description || 'No description available';
+
+        // Statistics
+        const statsHtml = `
+            <div class="stat-item">
+                <div class="stat-number">${formatNumber(stats.total_genes || 0)}</div>
+                <div class="stat-text">Total Genes</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">${formatNumber(stats.total_sites || 0)}</div>
+                <div class="stat-text">Phospho Sites</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">${formatNumber(stats.significant_sites || 0)}</div>
+                <div class="stat-text">Significant</div>
+            </div>
+        `;
+        document.getElementById('pathway-summary-stats').innerHTML = statsHtml;
+
+        // Proteins list
+        const proteinsHtml = proteins.map(protein => `
+            <div class="protein-item" onclick="window.location.href='/proteins?protein=${protein.gene_symbol}'">
+                <div>
+                    <div class="protein-name">${protein.gene_symbol}</div>
+                    <div class="protein-sites">
+                        ${formatNumber(protein.total_sites || 0)} sites •
+                        ${formatNumber(protein.significant_sites || 0)} significant
+                    </div>
+                </div>
+                <i class="fas fa-chevron-right" style="color: var(--text-muted);"></i>
+            </div>
+        `).join('');
+
+        document.getElementById('pathway-summary-proteins').innerHTML = proteinsHtml ||
+            '<div style="text-align: center; color: var(--text-muted); padding: 2rem;">No proteins found</div>';
+
+        // Export button
+        document.getElementById('pathway-summary-export').onclick = function() {
+            window.location.href = `/api/pathway/${pathway.gs_id}/export`;
+        };
+    }
+
+    // Hide pathway summary sidebar
+    function hidePathwaySummary() {
+        summaryPanel.classList.remove('active');
+        summaryOverlay.style.opacity = '0';
+        summaryOverlay.style.visibility = 'hidden';
+        document.body.style.overflow = 'auto';
+    }
+
+    // Helper function to format numbers
+    function formatNumber(num) {
+        return new Intl.NumberFormat().format(num);
+    }
+});
 
 // Initialize analysis when page loads
 document.addEventListener('DOMContentLoaded', () => {

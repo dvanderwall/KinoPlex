@@ -73,26 +73,34 @@ def get_pathway_analysis(pathway_id):
 
         # STEP 3: Get pathway-level kinase enrichment using gs_name
         # This is the critical query that needs to be fixed
+        # In app/api/routes.py, update the pathway analysis query:
+
         enriched_kinases = execute_query("""
-                    SELECT 
-                        kinase,
-                        score_integrated,
-                        rank_integrated,
-                        n_genes_with_kinase,
-                        gene_coverage,
-                        fisher_p,
-                        enrichment_ratio,
-                        score_zscore_only,
-                        score_ratio_based,
-                        mean_enrichment,
-                        max_enrichment,
-                        n_total_sites,
-                        prop_significant
-                    FROM pathway_kinase_mapping 
-                    WHERE gs_name = ? AND score_integrated IS NOT NULL
-                    ORDER BY score_integrated DESC
-                    LIMIT 50
-                """, (gs_name,))
+            SELECT 
+                kinase,
+                score_integrated,
+                score_zscore_only,
+                score_ratio_based,
+                rank_integrated,
+                n_genes_with_kinase,
+                gene_coverage,
+                fisher_p,
+                enrichment_ratio,
+                mean_enrichment,
+                max_enrichment,
+                n_total_sites,
+                prop_significant,
+                n_genes_above_kinase_q75,
+                n_sites_above_kinase_q75, 
+                n_genes_above_kinase_q90,
+                n_sites_above_kinase_q90,
+                fold_enrichment_sites_q90,
+                fold_enrichment_genes_q90
+            FROM pathway_kinase_mapping 
+            WHERE gs_name = ? AND score_integrated IS NOT NULL
+            ORDER BY n_sites_above_kinase_q75 DESC, n_sites_above_kinase_q90 DESC
+            LIMIT 50
+        """, (gs_name,))
 
         current_app.logger.info(f"Found {len(enriched_kinases)} enriched kinases from pathway_kinase_mapping")
 
@@ -159,7 +167,7 @@ def get_pathway_analysis(pathway_id):
                     protein_kinase_map[row['gene_symbol']] = []
                 protein_kinase_map[row['gene_symbol']].append(dict(row))
 
-            # Create protein objects with phosphosite stats and kinase enrichments
+            # Create protein objects with phosphosite stats and ALL kinase enrichments
             for gene_symbol in protein_list[:25]:  # Show top 25 proteins
                 # Get basic phosphosite stats
                 protein_stats = execute_query("""
@@ -176,7 +184,7 @@ def get_pathway_analysis(pathway_id):
                     'total_sites': protein_stats['total_sites'] if protein_stats else 0,
                     'significant_sites': protein_stats['significant_sites'] if protein_stats else 0,
                     'max_confidence': protein_stats['max_confidence'] if protein_stats else 0,
-                    'top_kinases': protein_kinase_map.get(gene_symbol, [])[:10]  # Top 10 kinases per protein
+                    'top_kinases': protein_kinase_map.get(gene_symbol, [])  # All kinases, not just top 10
                 }
 
                 proteins_with_enrichment.append(protein_data)

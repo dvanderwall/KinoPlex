@@ -253,7 +253,7 @@
 
     .kinase-metrics {
         display: grid;
-        grid-template-columns: 1fr 1fr 1fr;
+        grid-template-columns: repeat(3, 1fr);
         gap: 0.75rem;
         margin-top: 1rem;
     }
@@ -331,12 +331,30 @@
         padding: 1.5rem;
         margin-bottom: 1.5rem;
         transition: all 0.3s ease;
+        cursor: pointer;
     }
 
     .protein-card-enhanced:hover {
         background: rgba(255, 255, 255, 0.05);
-        transform: translateX(8px);
+        transform: translateY(-4px);
         border-color: rgba(102, 126, 234, 0.5);
+        box-shadow: 0 8px 15px rgba(0, 0, 0, 0.3);
+    }
+
+    .protein-card-enhanced::after {
+        content: '\f078'; /* down arrow */
+        font-family: 'Font Awesome 6 Free';
+        font-weight: 900;
+        position: absolute;
+        top: 1.5rem;
+        right: 1.5rem;
+        color: var(--text-secondary);
+        transition: transform 0.3s ease;
+    }
+
+    .protein-card-enhanced.expanded::after {
+        transform: rotate(180deg);
+        color: var(--accent-blue);
     }
 
     .protein-header {
@@ -407,12 +425,14 @@
 
     /* Expandable Protein Kinase Table */
     .protein-kinase-detail {
-        margin-top: 1rem;
+        margin-top: 1.5rem;
         background: rgba(0, 0, 0, 0.2);
         border-radius: 12px;
         padding: 1.5rem;
         display: none;
         animation: slideDown 0.3s ease;
+        max-height: 400px;
+        overflow-y: auto;
     }
 
     .protein-kinase-detail.expanded {
@@ -623,27 +643,148 @@
         transform: scale(1.02);
     }
 
-    .protein-kinase-detail {
-        margin-top: 1rem;
-        background: rgba(0, 0, 0, 0.2);
-        border-radius: 12px;
-        padding: 1.5rem;
-        display: none;
-        animation: slideDown 0.3s ease;
-    }
-
-    .protein-kinase-detail.expanded {
-        display: block;
-    }
-
-    @keyframes slideDown {
-        from { opacity: 0; transform: translateY(-20px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-
     /* Sort Indicators */
     .sort-asc::after { content: ' ↑'; color: var(--accent-blue); }
     .sort-desc::after { content: ' ↓'; color: var(--accent-blue); }
+
+    /* Toggle icon */
+    .toggle-icon {
+        display: inline-block;
+        margin-left: 0.5rem;
+        transition: transform 0.3s ease;
+    }
+
+    .toggle-icon.expanded {
+        transform: rotate(180deg);
+    }
+
+
+    /* Add to your existing CSS */
+
+    /* Kinase Target Modal */
+    .kinase-target-modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.8);
+        backdrop-filter: blur(10px);
+        z-index: 1000;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    .kinase-target-content {
+        background: var(--secondary-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        width: 90%;
+        max-width: 1200px;
+        max-height: 90vh;
+        overflow: hidden;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+        display: flex;
+        flex-direction: column;
+    }
+
+    .kinase-target-header {
+        background: var(--kinase-gradient-1);
+        padding: 1.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        color: white;
+    }
+
+    .kinase-target-header h3 {
+        margin: 0;
+        font-size: 1.5rem;
+        font-weight: 700;
+    }
+
+    .close-btn {
+        background: rgba(255, 255, 255, 0.2);
+        border: none;
+        border-radius: 50%;
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .close-btn:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: scale(1.1);
+    }
+
+    .kinase-target-body {
+        padding: 2rem;
+        overflow-y: auto;
+        max-height: calc(90vh - 80px);
+    }
+
+    .no-targets, .error-message {
+        text-align: center;
+        padding: 3rem;
+        color: var(--text-secondary);
+    }
+
+    .no-targets i, .error-message i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        color: var(--text-muted);
+    }
+
+    .error-message i {
+        color: var(--accent-pink);
+    }
+
+    .target-count {
+        margin-bottom: 1.5rem;
+        font-size: 1.1rem;
+        color: var(--text-secondary);
+    }
+
+    .target-table-container {
+        overflow-x: auto;
+    }
+
+    .target-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .target-table th,
+    .target-table td {
+        padding: 1rem;
+        text-align: left;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .target-table th {
+        background: rgba(255, 255, 255, 0.05);
+        font-weight: 600;
+        color: var(--text-primary);
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+
+    .target-table tr:hover {
+        background: rgba(255, 255, 255, 0.03);
+    }
 </style>
 {% endblock %}
 
@@ -699,17 +840,7 @@
                         Top kinases enriched in this pathway based on integrated scoring across all member proteins
                     </p>
 
-                    <!-- Enhanced Statistics Panel -->
-                    <div class="stats-panel">
-                        <div class="stat-chart-container">
-                            <h3 class="stat-chart-title">Kinase Family Distribution</h3>
-                            <canvas id="family-distribution-chart" height="120"></canvas>
-                        </div>
-                        <div class="stat-chart-container">
-                            <h3 class="stat-chart-title">Enrichment Score Distribution</h3>
-                            <canvas id="enrichment-distribution-chart" height="120"></canvas>
-                        </div>
-                    </div>
+
 
                     <!-- Top Kinases Grid -->
                     <div class="kinase-cards-grid" id="kinase-cards">
@@ -749,7 +880,7 @@
                         <i class="fas fa-dna"></i> Protein-Level Kinase Analysis
                     </h2>
                     <p style="color: var(--text-secondary); margin-bottom: 2rem;">
-                        Detailed kinase enrichment analysis for each protein in this pathway. Click kinase chips to expand detailed metrics.
+                        Detailed kinase enrichment analysis for each protein in this pathway. Click on any protein card to see all kinase data.
                     </p>
                     <div id="proteins-list">
                         <!-- Protein cards will be populated here -->
@@ -795,8 +926,19 @@
 {% endblock %}
 
 {% block extra_js %}
+<!-- Make sure to load Chart.js from CDN -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chart.js/4.3.0/chart.umd.min.js"></script>
+
 <script>
+// Global function for protein detail toggling
+window.toggleProteinDetail = function(geneSymbol) {
+    if (window.pathwayAnalysis) {
+        window.pathwayAnalysis.toggleProteinDetail(geneSymbol);
+    } else {
+        console.error('pathwayAnalysis object not found');
+    }
+};
+
 class EnhancedPathwayKinaseAnalysis {
     constructor(pathwayId) {
         this.pathwayId = pathwayId;
@@ -833,20 +975,124 @@ class EnhancedPathwayKinaseAnalysis {
 
             this.data = await response.json();
 
-            // DEBUG LOGGING - Add these lines
+            // DEBUG LOGGING
             console.log('Raw API response:', this.data);
             console.log('Enriched kinases count:', (this.data.enriched_kinases || []).length);
             console.log('Proteins count:', (this.data.proteins || []).length);
-            console.log('Sample enriched kinases:', (this.data.enriched_kinases || []).slice(0, 3));
+
+            if (this.data.enriched_kinases && this.data.enriched_kinases.length > 0) {
+                console.log('Sample enriched kinases:', this.data.enriched_kinases.slice(0, 3));
+            }
 
             if (this.data.error) {
                 throw new Error(this.data.error);
             }
-
-            // Rest of the method...
         } catch (error) {
             console.error('Error loading data:', error);
             this.showError(`Failed to load pathway analysis: ${error.message}`);
+        }
+    }
+
+    async showKinaseTargets(kinaseName) {
+        console.log(`Showing targets for kinase: ${kinaseName}`);
+
+        // Create a modal or panel to display the results
+        const modal = document.createElement('div');
+        modal.className = 'kinase-target-modal';
+        modal.innerHTML = `
+            <div class="kinase-target-content">
+                <div class="kinase-target-header">
+                    <h3>${kinaseName} Targets in this Pathway</h3>
+                    <button class="close-btn" onclick="this.closest('.kinase-target-modal').remove()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="kinase-target-body">
+                    <div class="loading-spinner"></div>
+                    <p>Loading target proteins...</p>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        try {
+            // Get proteins from the current pathway that are targets of this kinase
+            const proteins = this.data.proteins || [];
+            const targetProteins = [];
+
+            // For each protein, check if it has this kinase in its top_kinases
+            proteins.forEach(protein => {
+                const topKinases = protein.top_kinases || [];
+                const kinaseMatch = topKinases.find(k => k.kinase === kinaseName);
+
+                if (kinaseMatch) {
+                    targetProteins.push({
+                        gene_symbol: protein.gene_symbol,
+                        n_sites: kinaseMatch.n_sites || 0,
+                        enrichment_score: kinaseMatch.enrichment_score || 0,
+                        z_score: kinaseMatch.z_score_kinase || 0,
+                        n_above_q75: kinaseMatch.n_above_q75 || 0,
+                        n_above_q90: kinaseMatch.n_above_q90 || 0,
+                        max_score: kinaseMatch.max_score || 0
+                    });
+                }
+            });
+
+            // Sort target proteins by n_sites (descending)
+            targetProteins.sort((a, b) => b.n_sites - a.n_sites);
+
+            // Update the modal with the results
+            const targetBody = modal.querySelector('.kinase-target-body');
+
+            if (targetProteins.length === 0) {
+                targetBody.innerHTML = `
+                    <div class="no-targets">
+                        <i class="fas fa-info-circle"></i>
+                        <p>No proteins in this pathway were found to be targets of ${kinaseName}.</p>
+                    </div>
+                `;
+            } else {
+                targetBody.innerHTML = `
+                    <div class="target-count">Found ${targetProteins.length} proteins targeted by ${kinaseName}</div>
+                    <div class="target-table-container">
+                        <table class="target-table">
+                            <thead>
+                                <tr>
+                                    <th>Protein</th>
+                                    <th>Sites</th>
+                                    <th>Enrichment Score</th>
+                                    <th>Z-Score</th>
+                                    <th>Sites > Q75</th>
+                                    <th>Sites > Q90</th>
+                                    <th>Max Score</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${targetProteins.map(protein => `
+                                    <tr>
+                                        <td><strong>${protein.gene_symbol}</strong></td>
+                                        <td>${protein.n_sites}</td>
+                                        <td>${protein.enrichment_score.toFixed(2)}</td>
+                                        <td>${protein.z_score.toFixed(2)}</td>
+                                        <td>${protein.n_above_q75}</td>
+                                        <td>${protein.n_above_q90}</td>
+                                        <td>${protein.max_score.toFixed(3)}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }
+        } catch (error) {
+            console.error('Error showing kinase targets:', error);
+            modal.querySelector('.kinase-target-body').innerHTML = `
+                <div class="error-message">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <p>Error retrieving target proteins: ${error.message}</p>
+                </div>
+            `;
         }
     }
 
@@ -933,14 +1179,16 @@ class EnhancedPathwayKinaseAnalysis {
     }
 
     renderLandscapeView() {
-        console.log('Rendering landscape view with enriched kinases:', this.data.enriched_kinases);
-
-        // First render the charts
-        this.renderEnhancedCharts();
-
-        // Then render kinase cards - FIXED to handle empty data better
         const kinaseCards = document.getElementById('kinase-cards');
         const enrichedKinases = this.data.enriched_kinases || [];
+
+        // Debug the exact structure of a kinase object
+        if (enrichedKinases.length > 0) {
+            console.log('KINASE STRUCTURE:', JSON.stringify(enrichedKinases[0]));
+            console.log('Q75 SITES:', enrichedKinases[0].n_sites_above_kinase_q75);
+            console.log('Q90 SITES:', enrichedKinases[0].n_sites_above_kinase_q90);
+            console.log('FOLD ENRICHMENT Q90:', enrichedKinases[0].fold_enrichment_sites_q90);
+        }
 
         if (enrichedKinases.length === 0) {
             kinaseCards.innerHTML = `
@@ -953,46 +1201,75 @@ class EnhancedPathwayKinaseAnalysis {
             return;
         }
 
-        const topKinases = enrichedKinases.slice(0, 15); // Show top 15
+        // Sort kinases by sites > Q75, then sites > Q90
+        const sortedKinases = [...enrichedKinases].sort((a, b) => {
+            // Find and use the best available field for sorting
+            const aQ75 = a.n_sites_above_kinase_q75 || a.n_genes_above_kinase_q75 || a.n_sites_above_q75 || 0;
+            const bQ75 = b.n_sites_above_kinase_q75 || b.n_genes_above_kinase_q75 || b.n_sites_above_q75 || 0;
 
-        kinaseCards.innerHTML = topKinases.map(kinase => {
-            const family = this.getKinaseFamily(kinase.kinase);
-            const integrated_score = kinase.score_integrated || 0;
-            const rank = kinase.rank_integrated || 0;
+            if (aQ75 !== bQ75) {
+                return bQ75 - aQ75; // Descending order
+            }
+
+            // If q75 is equal, try q90
+            const aQ90 = a.n_sites_above_kinase_q90 || a.n_genes_above_kinase_q90 || a.n_sites_above_q90 || 0;
+            const bQ90 = b.n_sites_above_kinase_q90 || b.n_genes_above_kinase_q90 || b.n_sites_above_q90 || 0;
+
+            return bQ90 - aQ90;
+        });
+
+        kinaseCards.innerHTML = sortedKinases.map(kinase => {
+            // Extract properties safely with fallbacks
+            const kinaseName = kinase.kinase || 'Unknown';
+            const family = this.getKinaseFamily(kinaseName);
+
+            // Get Q75 and Q90 site counts
+            const sitesQ75 = kinase.n_sites_above_kinase_q75 ||
+                              kinase.n_genes_above_kinase_q75 ||
+                              kinase.n_sites_above_q75 || 0;
+
+            const sitesQ90 = kinase.n_sites_above_kinase_q90 ||
+                              kinase.n_genes_above_kinase_q90 ||
+                              kinase.n_sites_above_q90 || 0;
+
+            // Use fold_enrichment_sites_q90 as the score
+            const foldEnrichmentQ90 = kinase.fold_enrichment_sites_q90 || 0;
+
+            // Other metrics
             const targets = kinase.n_genes_with_kinase || 0;
             const coverage = (kinase.gene_coverage || 0) * 100;
-            const pValue = kinase.fisher_p || 0;
+            const totalSites = kinase.n_total_sites || 0;
 
             return `
-                <div class="kinase-card interactive-element" onclick="pathwayAnalysis.selectKinase('${kinase.kinase}')">
+                <div class="kinase-card" data-kinase="${kinaseName}">
                     <div class="kinase-card-inner">
-                        <div class="kinase-name">${kinase.kinase}</div>
+                        <div class="kinase-name">${kinaseName}</div>
                         <div class="kinase-family-badge">${family} Family</div>
 
                         <div class="kinase-metrics">
-                            <div class="kinase-metric">
-                                <div class="kinase-metric-value">${integrated_score.toFixed(2)}</div>
-                                <div class="kinase-metric-label">Integrated Score</div>
+                            <div class="kinase-metric" style="background: rgba(16, 185, 129, 0.1);">
+                                <div class="kinase-metric-value">${sitesQ75}</div>
+                                <div class="kinase-metric-label">Sites > Q75</div>
                             </div>
-                            <div class="kinase-metric">
-                                <div class="kinase-metric-value">#${rank}</div>
-                                <div class="kinase-metric-label">Rank</div>
+                            <div class="kinase-metric" style="background: rgba(59, 130, 246, 0.1);">
+                                <div class="kinase-metric-value">${sitesQ90}</div>
+                                <div class="kinase-metric-label">Sites > Q90</div>
+                            </div>
+                            <div class="kinase-metric" style="background: rgba(236, 72, 153, 0.1);">
+                                <div class="kinase-metric-value">${foldEnrichmentQ90.toFixed(2)}x</div>
+                                <div class="kinase-metric-label">Q90 Fold Enrich</div>
                             </div>
                             <div class="kinase-metric">
                                 <div class="kinase-metric-value">${targets}</div>
-                                <div class="kinase-metric-label">Target Genes</div>
+                                <div class="kinase-metric-label">Targets</div>
                             </div>
                             <div class="kinase-metric">
                                 <div class="kinase-metric-value">${coverage.toFixed(0)}%</div>
                                 <div class="kinase-metric-label">Coverage</div>
                             </div>
                             <div class="kinase-metric">
-                                <div class="kinase-metric-value">${pValue.toExponential(1)}</div>
-                                <div class="kinase-metric-label">p-value</div>
-                            </div>
-                            <div class="kinase-metric">
-                                <div class="kinase-metric-value">${(kinase.enrichment_ratio || 0).toFixed(1)}x</div>
-                                <div class="kinase-metric-label">Enrichment</div>
+                                <div class="kinase-metric-value">${totalSites}</div>
+                                <div class="kinase-metric-label">Total Sites</div>
                             </div>
                         </div>
                     </div>
@@ -1000,12 +1277,25 @@ class EnhancedPathwayKinaseAnalysis {
             `;
         }).join('');
 
-        console.log(`Rendered ${topKinases.length} kinase cards`);
+        // Add click event listeners to kinase cards
+        const self = this;
+        document.querySelectorAll('.kinase-card').forEach(card => {
+            card.addEventListener('click', function() {
+                const kinaseName = this.getAttribute('data-kinase');
+                self.showKinaseTargets(kinaseName);
+            });
+        });
+
+        console.log(`Rendered ${sortedKinases.length} kinase cards, sorted by sites above Q75`);
     }
 
     renderEnhancedCharts() {
-        this.renderFamilyDistribution();
-        this.renderEnrichmentDistribution();
+        try {
+            this.renderFamilyDistribution();
+            this.renderEnrichmentDistribution();
+        } catch (e) {
+            console.error('Error rendering charts:', e);
+        }
     }
 
     renderFamilyDistribution() {
@@ -1026,6 +1316,11 @@ class EnhancedPathwayKinaseAnalysis {
         console.log('Kinase families data:', this.data.kinase_families);
 
         const families = this.data.kinase_families || {};
+        if (Object.keys(families).length === 0) {
+            console.warn('No family data available');
+            return;
+        }
+
         const familyData = Object.entries(families).map(([family, data]) => ({
             family: family,
             avg_score: data.avg_score || 0,
@@ -1033,47 +1328,51 @@ class EnhancedPathwayKinaseAnalysis {
         })).sort((a, b) => b.avg_score - a.avg_score);
 
         if (familyData.length === 0) {
-            console.warn('No family data available');
+            console.warn('No family data available after processing');
             return;
         }
 
-        // Create chart with the Chart.js syntax
-        this.charts.family = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: familyData.map(f => f.family),
-                datasets: [{
-                    label: 'Average Enrichment Score',
-                    data: familyData.map(f => f.avg_score),
-                    backgroundColor: [
-                        'rgba(102, 126, 234, 0.8)',
-                        'rgba(240, 147, 251, 0.8)',
-                        'rgba(79, 172, 254, 0.8)',
-                        'rgba(67, 233, 123, 0.8)',
-                        'rgba(250, 112, 154, 0.8)',
-                        'rgba(254, 225, 64, 0.8)'
-                    ],
-                    borderRadius: 8
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false }
+        // Create chart with Chart.js
+        try {
+            this.charts.family = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: familyData.map(f => f.family),
+                    datasets: [{
+                        label: 'Average Enrichment Score',
+                        data: familyData.map(f => f.avg_score),
+                        backgroundColor: [
+                            'rgba(102, 126, 234, 0.8)',
+                            'rgba(240, 147, 251, 0.8)',
+                            'rgba(79, 172, 254, 0.8)',
+                            'rgba(67, 233, 123, 0.8)',
+                            'rgba(250, 112, 154, 0.8)',
+                            'rgba(254, 225, 64, 0.8)'
+                        ],
+                        borderRadius: 8
+                    }]
                 },
-                scales: {
-                    x: {
-                        grid: { color: 'rgba(255, 255, 255, 0.1)' },
-                        ticks: { color: '#8b9dc3' }
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
                     },
-                    y: {
-                        grid: { color: 'rgba(255, 255, 255, 0.1)' },
-                        ticks: { color: '#8b9dc3' }
+                    scales: {
+                        x: {
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                            ticks: { color: '#8b9dc3' }
+                        },
+                        y: {
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                            ticks: { color: '#8b9dc3' }
+                        }
                     }
                 }
-            }
-        });
+            });
+        } catch (e) {
+            console.error('Error creating family chart:', e);
+        }
     }
 
     renderEnrichmentDistribution() {
@@ -1086,11 +1385,15 @@ class EnhancedPathwayKinaseAnalysis {
 
         const enrichedKinases = this.data.enriched_kinases || [];
         if (enrichedKinases.length === 0) {
-            ctx.getContext('2d').clearRect(0, 0, ctx.width, ctx.height);
+            console.warn('No enriched kinases data for chart');
             return;
         }
 
         const scores = enrichedKinases.map(k => k.score_integrated || 0);
+        if (scores.length === 0) {
+            console.warn('No scores available for chart');
+            return;
+        }
 
         // Create bins
         const bins = [0, 0, 0, 0]; // <1, 1-2, 2-4, >4
@@ -1101,35 +1404,39 @@ class EnhancedPathwayKinaseAnalysis {
             else bins[3]++;
         });
 
-        this.charts.enrichment = new Chart(ctx.getContext('2d'), {
-            type: 'doughnut',
-            data: {
-                labels: ['< 1.0', '1.0-2.0', '2.0-4.0', '> 4.0'],
-                datasets: [{
-                    data: bins,
-                    backgroundColor: [
-                        'rgba(239, 68, 68, 0.8)',
-                        'rgba(245, 158, 11, 0.8)',
-                        'rgba(59, 130, 246, 0.8)',
-                        'rgba(16, 185, 129, 0.8)'
-                    ],
-                    borderWidth: 2
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            color: '#8b9dc3',
-                            font: { family: 'Inter' }
+        try {
+            this.charts.enrichment = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['< 1.0', '1.0-2.0', '2.0-4.0', '> 4.0'],
+                    datasets: [{
+                        data: bins,
+                        backgroundColor: [
+                            'rgba(239, 68, 68, 0.8)',
+                            'rgba(245, 158, 11, 0.8)',
+                            'rgba(59, 130, 246, 0.8)',
+                            'rgba(16, 185, 129, 0.8)'
+                        ],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                color: '#8b9dc3',
+                                font: { family: 'Inter' }
+                            }
                         }
                     }
                 }
-            }
-        });
+            });
+        } catch (e) {
+            console.error('Error creating enrichment chart:', e);
+        }
     }
 
     renderNetworkView() {
@@ -1151,80 +1458,21 @@ class EnhancedPathwayKinaseAnalysis {
             return;
         }
 
-        // Create SVG container
-        const width = container.clientWidth;
-        const height = container.clientHeight;
-
-        const svg = d3.select(container).append("svg")
-            .attr("width", width)
-            .attr("height", height);
-
-        // Create nodes for top kinases
-        const nodes = enrichedKinases.slice(0, 15).map((kinase, i) => ({
-            id: kinase.kinase,
-            score: kinase.score_integrated || 0,
-            x: width/2 + 200 * Math.cos(i * 2 * Math.PI / 15),
-            y: height/2 + 200 * Math.sin(i * 2 * Math.PI / 15),
-            radius: 10 + (kinase.score_integrated || 0) * 5
-        }));
-
-        // Create simple links between nodes
-        const links = [];
-        for (let i = 0; i < nodes.length; i++) {
-            for (let j = i+1; j < nodes.length; j++) {
-                // Only connect nodes with some probability based on scores
-                if (Math.random() < 0.3) {
-                    links.push({
-                        source: nodes[i],
-                        target: nodes[j],
-                        value: (nodes[i].score + nodes[j].score) / 2
-                    });
-                }
-            }
-        }
-
-        // Create links
-        svg.selectAll("line")
-            .data(links)
-            .enter()
-            .append("line")
-            .attr("x1", d => d.source.x)
-            .attr("y1", d => d.source.y)
-            .attr("x2", d => d.target.x)
-            .attr("y2", d => d.target.y)
-            .attr("stroke", "rgba(0, 217, 255, 0.3)")
-            .attr("stroke-width", d => d.value);
-
-        // Create nodes
-        const nodeElements = svg.selectAll("circle")
-            .data(nodes)
-            .enter()
-            .append("circle")
-            .attr("cx", d => d.x)
-            .attr("cy", d => d.y)
-            .attr("r", d => d.radius)
-            .attr("fill", "#00d9ff");
-
-        // Add labels
-        svg.selectAll("text")
-            .data(nodes)
-            .enter()
-            .append("text")
-            .attr("x", d => d.x)
-            .attr("y", d => d.y - d.radius - 5)
-            .attr("text-anchor", "middle")
-            .attr("fill", "#8b9dc3")
-            .text(d => d.id);
-
-        // Store the network for future reference
-        this.networkSvg = svg;
+        // Create a simple network visualization since d3.js might not be loaded yet
+        container.innerHTML = `
+            <div style="text-align: center; padding: 4rem;">
+                <h3>Network Visualization</h3>
+                <p>This view would show an interactive network of ${enrichedKinases.length} kinases and their relationships.</p>
+                <p>The top kinases in this pathway are: ${enrichedKinases.slice(0, 5).map(k => k.kinase).join(', ')}</p>
+            </div>
+        `;
     }
 
     renderProteinsView() {
         const proteinsList = document.getElementById('proteins-list');
         const proteins = this.data.proteins || [];
 
-        console.log('Rendering proteins view with', proteins.length, 'proteins'); // DEBUG
+        console.log('Rendering proteins view with', proteins.length, 'proteins');
 
         if (proteins.length === 0) {
             proteinsList.innerHTML = `
@@ -1242,10 +1490,8 @@ class EnhancedPathwayKinaseAnalysis {
             const topKinases = protein.top_kinases || [];
             const isExpanded = this.expandedProteins.has(protein.gene_symbol);
 
-            console.log(`Protein ${protein.gene_symbol}:`, protein.total_sites, 'sites,', topKinases.length, 'kinases'); // DEBUG
-
             return `
-                <div class="protein-card-enhanced">
+                <div class="protein-card-enhanced" data-gene="${protein.gene_symbol}">
                     <div class="protein-header">
                         <div class="protein-name">${protein.gene_symbol}</div>
                         <div class="protein-stats">
@@ -1258,12 +1504,11 @@ class EnhancedPathwayKinaseAnalysis {
                     <div class="protein-kinases-section">
                         <div class="protein-kinases-title">
                             Top Kinases (${topKinases.length} found):
+                            <i class="fas fa-chevron-down toggle-icon ${isExpanded ? 'expanded' : ''}"></i>
                         </div>
                         <div class="protein-kinases">
                             ${topKinases.slice(0, 6).map(k => `
-                                <div class="protein-kinase-chip interactive-element"
-                                     onclick="pathwayAnalysis.toggleProteinDetail('${protein.gene_symbol}')"
-                                     style="cursor: pointer;">
+                                <div class="protein-kinase-chip interactive-element">
                                     <div class="kinase-chip-name">${k.kinase || 'Unknown'}</div>
                                     <div class="kinase-chip-count">${k.n_sites || 0} sites</div>
                                 </div>
@@ -1275,7 +1520,7 @@ class EnhancedPathwayKinaseAnalysis {
                     <div class="protein-kinase-detail ${isExpanded ? 'expanded' : ''}"
                          id="detail-${protein.gene_symbol}">
                         <h4 style="margin-bottom: 1rem; color: var(--text-primary);">
-                            Detailed Kinase Metrics for ${protein.gene_symbol}
+                            <i class="fas fa-list"></i> Complete Kinase Analysis for ${protein.gene_symbol}
                         </h4>
                         <table class="protein-kinase-table">
                             <thead>
@@ -1285,6 +1530,7 @@ class EnhancedPathwayKinaseAnalysis {
                                     <th>Z-Score</th>
                                     <th>Total Sites</th>
                                     <th>Sites > Q75</th>
+                                    <th>Sites > Q90</th>
                                     <th>Max Score</th>
                                 </tr>
                             </thead>
@@ -1295,7 +1541,8 @@ class EnhancedPathwayKinaseAnalysis {
                                         <td>${(k.enrichment_score || 0).toFixed(2)}</td>
                                         <td>${(k.z_score_kinase || 0).toFixed(2)}</td>
                                         <td>${k.n_sites || 0}</td>
-                                        <td><strong>${k.n_above_q75 || 0}</strong></td>
+                                        <td>${k.n_above_q75 || 0}</td>
+                                        <td>${k.n_above_q90 || 0}</td>
                                         <td>${(k.max_score || 0).toFixed(3)}</td>
                                     </tr>
                                 `).join('')}
@@ -1313,26 +1560,41 @@ class EnhancedPathwayKinaseAnalysis {
 
         // Set the HTML
         proteinsList.innerHTML = proteinCardsHtml;
+
+        // Add event listeners after rendering the HTML
+        const self = this;
+        document.querySelectorAll('.protein-card-enhanced').forEach(card => {
+            card.addEventListener('click', function() {
+                const geneSymbol = this.getAttribute('data-gene');
+                self.toggleProteinDetail(geneSymbol);
+            });
+        });
     }
 
     toggleProteinDetail(geneSymbol) {
-        console.log('Toggle protein detail called for:', geneSymbol); // Debug
+        console.log('Toggle protein detail called for:', geneSymbol);
 
         const detailElement = document.getElementById(`detail-${geneSymbol}`);
+        const proteinCard = document.querySelector(`.protein-card-enhanced[data-gene="${geneSymbol}"]`);
+        const toggleIcon = proteinCard?.querySelector('.toggle-icon');
 
-        if (!detailElement) {
-            console.error('Detail element not found for:', geneSymbol); // Debug
+        if (!detailElement || !proteinCard) {
+            console.error('Detail element or protein card not found for:', geneSymbol);
             return;
         }
 
         if (this.expandedProteins.has(geneSymbol)) {
             this.expandedProteins.delete(geneSymbol);
             detailElement.classList.remove('expanded');
-            console.log('Collapsed protein detail for:', geneSymbol); // Debug
+            proteinCard.classList.remove('expanded');
+            if (toggleIcon) toggleIcon.classList.remove('expanded');
+            console.log('Collapsed protein detail for:', geneSymbol);
         } else {
             this.expandedProteins.add(geneSymbol);
             detailElement.classList.add('expanded');
-            console.log('Expanded protein detail for:', geneSymbol); // Debug
+            proteinCard.classList.add('expanded');
+            if (toggleIcon) toggleIcon.classList.add('expanded');
+            console.log('Expanded protein detail for:', geneSymbol);
         }
     }
 
@@ -1385,19 +1647,6 @@ class EnhancedPathwayKinaseAnalysis {
                 </tr>
             `;
         }).join('');
-    }
-
-    // Utility methods remain the same
-    toggleProteinDetail(geneSymbol) {
-        const detailElement = document.getElementById(`detail-${geneSymbol}`);
-
-        if (this.expandedProteins.has(geneSymbol)) {
-            this.expandedProteins.delete(geneSymbol);
-            if (detailElement) detailElement.classList.remove('expanded');
-        } else {
-            this.expandedProteins.add(geneSymbol);
-            if (detailElement) detailElement.classList.add('expanded');
-        }
     }
 
     sortSitesData(column, direction) {
@@ -1516,26 +1765,52 @@ function resetNetworkView() {
 }
 
 function toggleNodeLabels() {
-    const labels = d3.selectAll('#kinase-network text');
-    const currentOpacity = labels.style('opacity');
-    labels.transition()
-        .duration(300)
-        .style('opacity', currentOpacity === '0' ? '1' : '0');
+    const labels = document.querySelectorAll('#kinase-network text');
+    labels.forEach(label => {
+        const currentOpacity = window.getComputedStyle(label).opacity;
+        label.style.opacity = currentOpacity === '0' ? '1' : '0';
+    });
 }
 
 // Initialize analysis when page loads
-let pathwayAnalysis;
 document.addEventListener('DOMContentLoaded', () => {
-    const pathParts = window.location.pathname.split('/');
-    const pathwayId = pathParts[2];
+    try {
+        // Extract pathway ID from the URL
+        const pathParts = window.location.pathname.split('/');
+        const pathwayId = parseInt(pathParts[2]); // Get ID from /pathway/[ID]/analysis
 
-    if (pathwayId && !isNaN(pathwayId)) {
-        window.pathwayAnalysis = new EnhancedPathwayKinaseAnalysis(parseInt(pathwayId));
+        console.log("Initializing with pathway ID:", pathwayId);
 
-        // Initialize tab indicator for 4 tabs
+        if (isNaN(pathwayId)) {
+            console.error("Invalid pathway ID in URL");
+            document.getElementById('loading-state').innerHTML = `
+                <div style="color: var(--accent-pink); text-align: center;">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 3rem; margin-bottom: 1rem;"></i>
+                    <h3>Invalid Pathway ID</h3>
+                    <p>Could not determine the pathway ID from the URL.</p>
+                </div>
+            `;
+            return;
+        }
+
+        // Initialize globally accessible
+        window.pathwayAnalysis = new EnhancedPathwayKinaseAnalysis(pathwayId);
+
+        // Initialize tab indicator
         const indicator = document.getElementById('tab-indicator');
-        indicator.style.width = '25%';
-        indicator.style.left = '0%';
+        if (indicator) {
+            indicator.style.width = '25%';
+            indicator.style.left = '0%';
+        }
+    } catch (e) {
+        console.error("Initialization error:", e);
+        document.getElementById('loading-state').innerHTML = `
+            <div style="color: var(--accent-pink); text-align: center;">
+                <i class="fas fa-exclamation-triangle" style="font-size: 3rem; margin-bottom: 1rem;"></i>
+                <h3>Initialization Error</h3>
+                <p>${e.message}</p>
+            </div>
+        `;
     }
 });
 </script>

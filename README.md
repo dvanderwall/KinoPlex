@@ -26,19 +26,7 @@ Structural_Library/
 
 ### Create & activate a virtual environment
 
-**macOS / Linux**
-```bash
-cd Structural_Library
-python -m venv .venv
-source .venv/bin/activate
-```
 
-**Windows (PowerShell)**
-```powershell
-cd Structural_Library
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-```
 
 ### Install dependencies
 ```bash
@@ -60,7 +48,7 @@ psutil>=5.9,<6
 
 ## 2) Prepare inputs
 
-Place your input structures in `Structure_Depot/`.  
+Place your input structures in `Structure_Depot/` (several structures included as toy examples).  
 Accepted formats: `.cif`, `.pdb`, and their gzipped equivalents (`.cif.gz`, `.pdb.gz`).  
 You can organize them in subfolders if you like.
 

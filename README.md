@@ -1,195 +1,135 @@
-# Structural Context Pipeline
+# Structural Library
 
-A comprehensive pipeline for extracting structural context features from protein structures (AlphaFold models or experimental structures). This tool generates structural atlases and disorder/boundary panels for phosphorylation site analysis and other structural bioinformatics applications.
+Tools for building a structural-context library from PDB/mmCIF structures and running the end-to-end pipeline.
 
-## Features
+## Folder layout
 
-- **Structural Context Atlas**: Extract comprehensive structural features around residues of interest
-- **Disorder/Boundary Panel**: Analyze disorder metrics, accessibility, and biophysical properties
-- **Flexible Input**: Support for CIF and PDB format files (compressed or uncompressed)
-- **Parallel Processing**: Multi-core support for efficient large-scale analysis
-- **Merged Output**: Automatically combines features into a single analysis-ready CSV
+```
+Structural_Library/
+├─ main/
+│  ├─ build_structure_context_library.py
+│  ├─ build_structure_context_library_update_v2.py
+│  └─ run_structural_context_pipeline.py
+├─ Structure_Depot/          # put your .cif/.pdb (optionally .gz) here
+├─ temp_results/             # scratch/intermediate outputs
+├─ runner_temp/              # temporary working dir
+├─ results.csv               # example final results file
+├─ requirements.txt
+└─ setup.py
+```
 
-## Installation
+---
 
-### Prerequisites
+## 1) Installation
 
-- Python 3.8 or higher
-- pip package manager
+> Requires Python 3.10–3.12.
 
-### Quick Install
+### Create & activate a virtual environment
 
+**macOS / Linux**
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/structural-context-pipeline.git
-cd structural-context-pipeline
-
-# Install with pip
-pip install -e .
+cd Structural_Library
+python -m venv .venv
+source .venv/bin/activate
 ```
 
-### Install from requirements.txt
+**Windows (PowerShell)**
+```powershell
+cd Structural_Library
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+```
 
+### Install dependencies
 ```bash
-# Install core dependencies
-pip install -r requirements.txt
-
-# For development (optional)
-pip install -r requirements-dev.txt
-```
-
-## Repository Structure
-
-```
-structural-context-pipeline/
-├── main/
-│   ├── build_structure_context_library.py       # Structural atlas builder
-│   ├── build_structure_context_library_update.py # Disorder/boundary panel
-│   └── run_structural_context_pipeline.py       # Main pipeline script
-├── Structure_Depot/                             # Place your structure files here
-│   └── (your .cif/.pdb/.gz files)
-├── setup.py                                      # Package setup
-├── requirements.txt                              # Core dependencies
-├── requirements-dev.txt                          # Development dependencies
-└── README.md                                     # This file
-```
-
-## Usage
-
-### Basic Usage
-
-```bash
-# Run the full pipeline (atlas + disorder panel + merge)
-python main/run_structural_context_pipeline.py Structure_Depot -o results.csv
-
-# Or if installed as package:
-structural-context-pipeline Structure_Depot -o results.csv
-```
-
-### Common Options
-
-```bash
-# Specify file types and use PDB as fallback
-python main/run_structural_context_pipeline.py Structure_Depot \
-    -o combined_features.csv \
-    -t cif \
-    --fallback-pdb
-
-# Use multiple CPU cores and custom batch size
-python main/run_structural_context_pipeline.py Structure_Depot \
-    -o results.csv \
-    -p 8 \
-    -b 16
-
-# Process only a subset of files for testing
-python main/run_structural_context_pipeline.py Structure_Depot \
-    -o test_results.csv \
-    -m 100
-
-# Keep intermediate files for debugging
-python main/run_structural_context_pipeline.py Structure_Depot \
-    -o results.csv \
-    --keep-intermediate
-```
-
-### Advanced Usage
-
-```bash
-# Run only the structural atlas
-python main/run_structural_context_pipeline.py Structure_Depot \
-    --only-atlas \
-    -o atlas_only.csv
-
-# Run only the disorder panel
-python main/run_structural_context_pipeline.py Structure_Depot \
-    --only-panel \
-    -o panel_only.csv
-
-# Custom window size and temp directory
-python main/run_structural_context_pipeline.py Structure_Depot \
-    -o results.csv \
-    -w 10 \
-    -d ./my_temp_results
-```
-
-## Command-Line Arguments
-
-| Argument | Description | Default |
-|----------|-------------|---------|
-| `structure_dir` | Directory containing structure files (.cif/.pdb/.gz) | Required |
-| `-o, --output` | Output CSV filename | `combined_structural_features.csv` |
-| `-d, --temp-dir` | Directory for intermediate outputs | `./temp_results` |
-| `-t, --file-types` | Comma-separated file types (cif,pdb) | `cif` |
-| `-f, --fallback-pdb` | Include PDB when CIF not present | False |
-| `-p, --num-processes` | Worker processes (0=auto) | 0 |
-| `-b, --batch-size` | Batch size for file submissions | 16 |
-| `-w, --window` | Half-window size (±window residues) | 7 |
-| `-m, --max-files` | Max files to process (0=all) | 0 |
-| `-q, --quiet` | Suppress per-file output | False |
-| `--only-atlas` | Run only atlas builder | False |
-| `--only-panel` | Run only disorder panel | False |
-| `--keep-intermediate` | Keep intermediate CSVs | False |
-
-## Output Format
-
-The pipeline generates a CSV file with the following key columns:
-
-- **UniProtID**: UniProt accession identifier
-- **ChainID**: Protein chain identifier
-- **ResidueNumber**: Residue position
-- **ResidueType**: Single-letter amino acid code
-- **Site**: Specific residue designation
-- **[Structural Features]**: Various context-specific features from the atlas
-- **[Disorder Features]**: Disorder metrics and boundary information from the panel
-
-## Input Structure Files
-
-Place your structure files in the `Structure_Depot/` directory (or specify a custom directory). Supported formats:
-
-- CIF files (`.cif`)
-- PDB files (`.pdb`)
-- Compressed files (`.gz`)
-
-The pipeline can process AlphaFold predicted structures or experimental structures from the PDB.
-
-## Performance Tips
-
-1. **Parallel Processing**: Use `-p` to specify CPU cores (e.g., `-p 8` for 8 cores)
-2. **Batch Size**: Adjust `-b` based on available memory (larger = faster but more RAM)
-3. **Test First**: Use `-m 10` to process only 10 files for testing
-4. **File Types**: If you only have CIF files, use `-t cif` to skip PDB scanning
-
-## Troubleshooting
-
-### Missing Dependencies
-```bash
+pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-### Memory Issues
-- Reduce batch size: `-b 8`
-- Reduce parallel processes: `-p 4`
-- Process files in chunks: `-m 1000`
+The minimal `requirements.txt` expected by the scripts is:
+```text
+numpy>=1.24,<3
+pandas>=2.1,<3
+scipy>=1.11,<2
+biopython>=1.83,<2
+tqdm>=4.66,<5
+psutil>=5.9,<6
+```
 
-### Missing Structure Files
-Ensure your structure files are in the correct directory and have proper naming conventions.
+---
 
-## Citation
+## 2) Prepare inputs
 
-If you use this pipeline in your research, please cite:
+Place your input structures in `Structure_Depot/`.  
+Accepted formats: `.cif`, `.pdb`, and their gzipped equivalents (`.cif.gz`, `.pdb.gz`).  
+You can organize them in subfolders if you like.
 
-[Your paper citation here]
+---
 
-## License
+## 3) Running from the command line
 
-[Specify your license here - e.g., MIT, GPL, etc.]
+Each script supports `-h/--help` to print the exact arguments. Run this first to confirm names:
+```bash
+python main/run_structural_context_pipeline.py -h
+python main/build_structure_context_library.py -h
+python main/build_structure_context_library_update_v2.py -h
+```
 
-## Contact
+Below are **typical** invocations. If an option name differs on your machine, use `-h` and substitute (e.g., some scripts use `--input` instead of `--structures`, or `--workers` instead of `--n-procs`).
 
-For questions, issues, or contributions:
-- GitHub Issues: https://github.com/yourusername/structural-context-pipeline/issues
-- Email: your.email@example.com
+### A) End-to-end pipeline (recommended)
+Runs the full process on everything in `Structure_Depot/` and writes intermediates to `temp_results/` and a summary CSV.
 
-## Acknowledgments
+```bash
+python main/run_structural_context_pipeline.py   --structures Structure_Depot   --out temp_results   --results results.csv   --n-procs 8
+```
 
-This pipeline was developed for phosphorylation site analysis and kinase-substrate prediction research using AlphaFold structural models.
+Common optional flags you may see:
+- `--resume` : skip structures already processed in `temp_results/`
+- `--verbose` or `-v` : more logging
+- `--seed 42` : make any randomized steps reproducible
+
+### B) Build the library from scratch
+```bash
+python main/build_structure_context_library.py   --structures Structure_Depot   --out temp_results   --results results.csv   --n-procs 8
+```
+
+### C) Incremental update (add new/changed structures only)
+```bash
+python main/build_structure_context_library_update_v2.py   --structures Structure_Depot   --out temp_results   --results results.csv   --n-procs 8   --resume
+```
+
+> Tip: If your script prefers `--workers`, use that in place of `--n-procs`.
+
+---
+
+## 4) Outputs
+
+- **Intermediate artifacts**: written under `temp_results/` (and/or `runner_temp/`).
+- **Final table**: `results.csv` (path can be changed with `--results`).
+
+Progress bars (from `tqdm`) will show per-file processing; CPU usage can be controlled with `--n-procs/--workers`.
+
+---
+
+## 5) Troubleshooting
+
+- `ModuleNotFoundError: Bio` → `pip install biopython` (already in `requirements.txt`).
+- `ImportError: scipy.spatial.cKDTree` → ensure SciPy installed and Python version is supported.
+- Process gets killed / runs out of memory → lower `--n-procs` (try 2–4), free disk in `temp_results/`.
+- “unrecognized arguments” → check `-h` and adjust flag names (`--input` vs `--structures`, `--output-dir` vs `--out`, etc.).
+- Gzipped files not read → ensure file extension ends with `.gz` and that the script’s input glob includes `*.gz`.
+
+---
+
+## 6) Reproducing an example run
+
+```bash
+# from the project root
+source .venv/bin/activate            # or Windows Activate.ps1
+python main/run_structural_context_pipeline.py   --structures Structure_Depot   --out temp_results   --results results.csv   --n-procs 8 --resume -v
+```
+
+When it finishes, open `results.csv` to inspect the aggregated results.
+
+---

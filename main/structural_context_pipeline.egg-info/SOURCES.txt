@@ -1,0 +1,8 @@
+README.md
+setup.py
+main/structural_context_pipeline.egg-info/PKG-INFO
+main/structural_context_pipeline.egg-info/SOURCES.txt
+main/structural_context_pipeline.egg-info/dependency_links.txt
+main/structural_context_pipeline.egg-info/entry_points.txt
+main/structural_context_pipeline.egg-info/requires.txt
+main/structural_context_pipeline.egg-info/top_level.txt

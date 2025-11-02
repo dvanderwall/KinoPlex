@@ -1,16 +1,11 @@
-# Core dependencies for Structural Context Pipeline
-# Python >= 3.8 required
+# Core scientific stack
+numpy>=1.24,<3
+pandas>=2.1,<3
+scipy>=1.11,<2    # for scipy.spatial.cKDTree
 
-# Data manipulation and analysis
-numpy>=1.20.0
-pandas>=1.3.0
-scipy>=1.7.0
+# Bio structures
+biopython>=1.83,<2 # PDBParser, MMCIFParser, HSExposure, etc.
 
-# Structural biology file parsing
-biopython>=1.79
-
-# Optional but recommended for performance
-# numba>=0.54.0  # Uncomment if using JIT compilation for speed
-
-# Development dependencies (optional)
-# Install with: pip install -r requirements-dev.txt
+# Utilities
+tqdm>=4.66,<5
+psutil>=5.9,<6

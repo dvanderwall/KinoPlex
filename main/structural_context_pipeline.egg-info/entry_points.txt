@@ -1,0 +1,2 @@
+[console_scripts]
+structural-context-pipeline = run_structural_context_pipeline:main

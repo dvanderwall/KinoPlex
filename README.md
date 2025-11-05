@@ -1,3 +1,6 @@
+# ATTENTION USERS AND MANUSCRIPT REVIEWERS
+The Code for KinoPlex Web can be found at https://github.com/dvanderwall/KinoPlex_CST_WebApp, and is hosted by CST at https://kinoplex.phosphosite.org
+
 # Structural Library
 
 Tools for building a structural-context library from PDB/mmCIF structures and running the end-to-end pipeline.
@@ -121,3 +124,4 @@ python main/run_structural_context_pipeline.py   --structures Structure_Depot   
 When it finishes, open `results.csv` to inspect the aggregated results.
 
 ---
+

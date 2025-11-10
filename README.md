@@ -1,5 +1,5 @@
 # ATTENTION USERS AND MANUSCRIPT REVIEWERS
-The Code for KinoPlex Web can be found at https://github.com/dvanderwall/KinoPlex_CST_WebApp, and is hosted by CST at https://kinoplex.phosphosite.org
+The KinoPlex Website is hosted on PhosphositePlus by CST at https://kinoplex.phosphosite.org and code can be found at https://github.com/dvanderwall/KinoPlex_CST_WebApp
 
 # Structural Library
 
@@ -124,4 +124,5 @@ python main/run_structural_context_pipeline.py   --structures Structure_Depot   
 When it finishes, open `results.csv` to inspect the aggregated results.
 
 ---
+
 
